@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "538559006995",
+    "project_id": "stm-app-cihe",
+    "storage_bucket": "stm-app-cihe.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:538559006995:android:e4e4753228ece43d5472e6",
+        "android_client_info": {
+          "package_name": "com.example.stm_app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "538559006995-nn1d7e2moo2l7un5t3j6ubifkbnd14do.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyADu6vQkyWw73uil1b2gPAvc9txyo33nYk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "538559006995-nn1d7e2moo2l7un5t3j6ubifkbnd14do.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
