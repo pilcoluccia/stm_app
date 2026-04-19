@@ -182,7 +182,7 @@ class CreateTaskVariables {
     return json;
   }
 
-  const CreateTaskVariables({
+  CreateTaskVariables({
     required this.title,
     required this.description,
     required this.status,

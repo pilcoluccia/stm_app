@@ -206,7 +206,7 @@ class CreateUserVariables {
     return json;
   }
 
-  const CreateUserVariables({
+  CreateUserVariables({
     required this.uid,
     required this.email,
     required this.name,

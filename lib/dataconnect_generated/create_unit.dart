@@ -162,7 +162,7 @@ class CreateUnitVariables {
     return json;
   }
 
-  const CreateUnitVariables({
+  CreateUnitVariables({
     required this.code,
     required this.name,
     required this.lecturerId,
