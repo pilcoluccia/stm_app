@@ -46,7 +46,7 @@ class MarkNotificationReadNotificationUpdate {
     return json;
   }
 
-  MarkNotificationReadNotificationUpdate({
+  const MarkNotificationReadNotificationUpdate({
     required this.id,
   });
 }
@@ -82,7 +82,7 @@ class MarkNotificationReadData {
     return json;
   }
 
-  MarkNotificationReadData({
+  const MarkNotificationReadData({
     this.notification_update,
   });
 }
@@ -117,7 +117,7 @@ class MarkNotificationReadVariables {
     return json;
   }
 
-  MarkNotificationReadVariables({
+  const MarkNotificationReadVariables({
     required this.id,
   });
 }

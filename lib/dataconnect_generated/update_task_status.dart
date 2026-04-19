@@ -48,7 +48,7 @@ class UpdateTaskStatusTaskUpdate {
     return json;
   }
 
-  UpdateTaskStatusTaskUpdate({
+  const UpdateTaskStatusTaskUpdate({
     required this.id,
   });
 }
@@ -84,7 +84,7 @@ class UpdateTaskStatusData {
     return json;
   }
 
-  UpdateTaskStatusData({
+  const UpdateTaskStatusData({
     this.task_update,
   });
 }
@@ -127,7 +127,7 @@ class UpdateTaskStatusVariables {
     return json;
   }
 
-  UpdateTaskStatusVariables({
+  const UpdateTaskStatusVariables({
     required this.id,
     required this.status,
     required this.completedHours,

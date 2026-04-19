@@ -48,7 +48,7 @@ class SendMessageMessageInsert {
     return json;
   }
 
-  SendMessageMessageInsert({
+  const SendMessageMessageInsert({
     required this.id,
   });
 }
@@ -82,7 +82,7 @@ class SendMessageData {
     return json;
   }
 
-  SendMessageData({
+  const SendMessageData({
     required this.message_insert,
   });
 }
@@ -125,7 +125,7 @@ class SendMessageVariables {
     return json;
   }
 
-  SendMessageVariables({
+  const SendMessageVariables({
     required this.groupId,
     required this.senderId,
     required this.text,

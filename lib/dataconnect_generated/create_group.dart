@@ -47,7 +47,7 @@ class CreateGroupGroupInsert {
     return json;
   }
 
-  CreateGroupGroupInsert({
+  const CreateGroupGroupInsert({
     required this.id,
   });
 }
@@ -81,7 +81,7 @@ class CreateGroupData {
     return json;
   }
 
-  CreateGroupData({
+  const CreateGroupData({
     required this.group_insert,
   });
 }
@@ -120,7 +120,7 @@ class CreateGroupVariables {
     return json;
   }
 
-  CreateGroupVariables({
+  const CreateGroupVariables({
     required this.name,
     required this.unitId,
   });

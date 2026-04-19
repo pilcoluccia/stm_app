@@ -7,8 +7,8 @@ class ListTasksByUserVariablesBuilder {
   ListTasksByUserVariablesBuilder(this._dataConnect, {required  this.assignedToId,});
   Deserializer<ListTasksByUserData> dataDeserializer = (dynamic json)  => ListTasksByUserData.fromJson(jsonDecode(json));
   Serializer<ListTasksByUserVariables> varsSerializer = (ListTasksByUserVariables vars) => jsonEncode(vars.toJson());
-  Future<QueryResult<ListTasksByUserData, ListTasksByUserVariables>> execute({QueryFetchPolicy fetchPolicy = QueryFetchPolicy.preferCache}) {
-    return ref().execute(fetchPolicy: fetchPolicy);
+  Future<QueryResult<ListTasksByUserData, ListTasksByUserVariables>> execute() {
+    return ref().execute();
   }
 
   QueryRef<ListTasksByUserData, ListTasksByUserVariables> ref() {

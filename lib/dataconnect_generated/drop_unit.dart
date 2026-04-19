@@ -47,7 +47,7 @@ class DropUnitData {
     return json;
   }
 
-  DropUnitData({
+  const DropUnitData({
     required this.enrollment_deleteMany,
   });
 }
@@ -86,7 +86,7 @@ class DropUnitVariables {
     return json;
   }
 
-  DropUnitVariables({
+  const DropUnitVariables({
     required this.studentId,
     required this.unitId,
   });

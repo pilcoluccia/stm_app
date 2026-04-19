@@ -51,7 +51,7 @@ class EnrollInUnitEnrollmentInsert {
     return json;
   }
 
-  EnrollInUnitEnrollmentInsert({
+  const EnrollInUnitEnrollmentInsert({
     required this.studentId,
     required this.unitId,
   });
@@ -86,7 +86,7 @@ class EnrollInUnitData {
     return json;
   }
 
-  EnrollInUnitData({
+  const EnrollInUnitData({
     required this.enrollment_insert,
   });
 }
@@ -125,7 +125,7 @@ class EnrollInUnitVariables {
     return json;
   }
 
-  EnrollInUnitVariables({
+  const EnrollInUnitVariables({
     required this.studentId,
     required this.unitId,
   });

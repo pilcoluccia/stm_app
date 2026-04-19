@@ -5,11 +5,11 @@ class CreateUserVariablesBuilder {
   String email;
   String name;
   String role;
-  Optional<String> _studentId = Optional.optional(nativeFromJson, nativeToJson);
-  Optional<String> _program = Optional.optional(nativeFromJson, nativeToJson);
-  Optional<int> _year = Optional.optional(nativeFromJson, nativeToJson);
-  Optional<String> _department = Optional.optional(nativeFromJson, nativeToJson);
-  Optional<String> _photoUrl = Optional.optional(nativeFromJson, nativeToJson);
+  final Optional<String> _studentId = Optional.optional(nativeFromJson, nativeToJson);
+  final Optional<String> _program = Optional.optional(nativeFromJson, nativeToJson);
+  final Optional<int> _year = Optional.optional(nativeFromJson, nativeToJson);
+  final Optional<String> _department = Optional.optional(nativeFromJson, nativeToJson);
+  final Optional<String> _photoUrl = Optional.optional(nativeFromJson, nativeToJson);
 
   final FirebaseDataConnect _dataConnect;  CreateUserVariablesBuilder studentId(String? t) {
    _studentId.value = t;
@@ -74,7 +74,7 @@ class CreateUserUserInsert {
     return json;
   }
 
-  CreateUserUserInsert({
+  const CreateUserUserInsert({
     required this.id,
   });
 }
@@ -108,7 +108,7 @@ class CreateUserData {
     return json;
   }
 
-  CreateUserData({
+  const CreateUserData({
     required this.user_insert,
   });
 }
@@ -206,7 +206,7 @@ class CreateUserVariables {
     return json;
   }
 
-  CreateUserVariables({
+  const CreateUserVariables({
     required this.uid,
     required this.email,
     required this.name,

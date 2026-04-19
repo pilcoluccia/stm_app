@@ -46,7 +46,7 @@ class DeleteTaskTaskDelete {
     return json;
   }
 
-  DeleteTaskTaskDelete({
+  const DeleteTaskTaskDelete({
     required this.id,
   });
 }
@@ -82,7 +82,7 @@ class DeleteTaskData {
     return json;
   }
 
-  DeleteTaskData({
+  const DeleteTaskData({
     this.task_delete,
   });
 }
@@ -117,7 +117,7 @@ class DeleteTaskVariables {
     return json;
   }
 
-  DeleteTaskVariables({
+  const DeleteTaskVariables({
     required this.id,
   });
 }

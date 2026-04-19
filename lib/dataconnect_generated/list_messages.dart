@@ -7,8 +7,8 @@ class ListMessagesVariablesBuilder {
   ListMessagesVariablesBuilder(this._dataConnect, {required  this.groupId,});
   Deserializer<ListMessagesData> dataDeserializer = (dynamic json)  => ListMessagesData.fromJson(jsonDecode(json));
   Serializer<ListMessagesVariables> varsSerializer = (ListMessagesVariables vars) => jsonEncode(vars.toJson());
-  Future<QueryResult<ListMessagesData, ListMessagesVariables>> execute({QueryFetchPolicy fetchPolicy = QueryFetchPolicy.preferCache}) {
-    return ref().execute(fetchPolicy: fetchPolicy);
+  Future<QueryResult<ListMessagesData, ListMessagesVariables>> execute() {
+    return ref().execute();
   }
 
   QueryRef<ListMessagesData, ListMessagesVariables> ref() {

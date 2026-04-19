@@ -7,8 +7,8 @@ class ListNotificationsVariablesBuilder {
   ListNotificationsVariablesBuilder(this._dataConnect, {required  this.userId,});
   Deserializer<ListNotificationsData> dataDeserializer = (dynamic json)  => ListNotificationsData.fromJson(jsonDecode(json));
   Serializer<ListNotificationsVariables> varsSerializer = (ListNotificationsVariables vars) => jsonEncode(vars.toJson());
-  Future<QueryResult<ListNotificationsData, ListNotificationsVariables>> execute({QueryFetchPolicy fetchPolicy = QueryFetchPolicy.preferCache}) {
-    return ref().execute(fetchPolicy: fetchPolicy);
+  Future<QueryResult<ListNotificationsData, ListNotificationsVariables>> execute() {
+    return ref().execute();
   }
 
   QueryRef<ListNotificationsData, ListNotificationsVariables> ref() {

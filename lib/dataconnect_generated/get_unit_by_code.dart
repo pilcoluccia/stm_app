@@ -7,8 +7,8 @@ class GetUnitByCodeVariablesBuilder {
   GetUnitByCodeVariablesBuilder(this._dataConnect, {required  this.code,});
   Deserializer<GetUnitByCodeData> dataDeserializer = (dynamic json)  => GetUnitByCodeData.fromJson(jsonDecode(json));
   Serializer<GetUnitByCodeVariables> varsSerializer = (GetUnitByCodeVariables vars) => jsonEncode(vars.toJson());
-  Future<QueryResult<GetUnitByCodeData, GetUnitByCodeVariables>> execute({QueryFetchPolicy fetchPolicy = QueryFetchPolicy.preferCache}) {
-    return ref().execute(fetchPolicy: fetchPolicy);
+  Future<QueryResult<GetUnitByCodeData, GetUnitByCodeVariables>> execute() {
+    return ref().execute();
   }
 
   QueryRef<GetUnitByCodeData, GetUnitByCodeVariables> ref() {

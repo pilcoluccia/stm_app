@@ -49,7 +49,7 @@ class CreateNotificationNotificationInsert {
     return json;
   }
 
-  CreateNotificationNotificationInsert({
+  const CreateNotificationNotificationInsert({
     required this.id,
   });
 }
@@ -83,7 +83,7 @@ class CreateNotificationData {
     return json;
   }
 
-  CreateNotificationData({
+  const CreateNotificationData({
     required this.notification_insert,
   });
 }
@@ -130,7 +130,7 @@ class CreateNotificationVariables {
     return json;
   }
 
-  CreateNotificationVariables({
+  const CreateNotificationVariables({
     required this.userId,
     required this.title,
     required this.body,

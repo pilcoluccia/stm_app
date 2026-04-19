@@ -52,7 +52,7 @@ class AddGroupMemberGroupMemberInsert {
     return json;
   }
 
-  AddGroupMemberGroupMemberInsert({
+  const AddGroupMemberGroupMemberInsert({
     required this.groupId,
     required this.userId,
   });
@@ -87,7 +87,7 @@ class AddGroupMemberData {
     return json;
   }
 
-  AddGroupMemberData({
+  const AddGroupMemberData({
     required this.groupMember_insert,
   });
 }
@@ -130,7 +130,7 @@ class AddGroupMemberVariables {
     return json;
   }
 
-  AddGroupMemberVariables({
+  const AddGroupMemberVariables({
     required this.groupId,
     required this.userId,
     required this.role,

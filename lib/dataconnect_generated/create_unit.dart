@@ -7,7 +7,7 @@ class CreateUnitVariablesBuilder {
   int credits;
   String semester;
   int maxStudents;
-  Optional<String> _description = Optional.optional(nativeFromJson, nativeToJson);
+  final Optional<String> _description = Optional.optional(nativeFromJson, nativeToJson);
 
   final FirebaseDataConnect _dataConnect;  CreateUnitVariablesBuilder description(String? t) {
    _description.value = t;
@@ -56,7 +56,7 @@ class CreateUnitUnitInsert {
     return json;
   }
 
-  CreateUnitUnitInsert({
+  const CreateUnitUnitInsert({
     required this.id,
   });
 }
@@ -90,7 +90,7 @@ class CreateUnitData {
     return json;
   }
 
-  CreateUnitData({
+  const CreateUnitData({
     required this.unit_insert,
   });
 }
@@ -162,7 +162,7 @@ class CreateUnitVariables {
     return json;
   }
 
-  CreateUnitVariables({
+  const CreateUnitVariables({
     required this.code,
     required this.name,
     required this.lecturerId,

@@ -7,8 +7,8 @@ class GetGroupForUnitVariablesBuilder {
   GetGroupForUnitVariablesBuilder(this._dataConnect, {required  this.unitId,});
   Deserializer<GetGroupForUnitData> dataDeserializer = (dynamic json)  => GetGroupForUnitData.fromJson(jsonDecode(json));
   Serializer<GetGroupForUnitVariables> varsSerializer = (GetGroupForUnitVariables vars) => jsonEncode(vars.toJson());
-  Future<QueryResult<GetGroupForUnitData, GetGroupForUnitVariables>> execute({QueryFetchPolicy fetchPolicy = QueryFetchPolicy.preferCache}) {
-    return ref().execute(fetchPolicy: fetchPolicy);
+  Future<QueryResult<GetGroupForUnitData, GetGroupForUnitVariables>> execute() {
+    return ref().execute();
   }
 
   QueryRef<GetGroupForUnitData, GetGroupForUnitVariables> ref() {

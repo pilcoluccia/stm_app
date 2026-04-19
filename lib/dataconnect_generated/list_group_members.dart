@@ -7,8 +7,8 @@ class ListGroupMembersVariablesBuilder {
   ListGroupMembersVariablesBuilder(this._dataConnect, {required  this.groupId,});
   Deserializer<ListGroupMembersData> dataDeserializer = (dynamic json)  => ListGroupMembersData.fromJson(jsonDecode(json));
   Serializer<ListGroupMembersVariables> varsSerializer = (ListGroupMembersVariables vars) => jsonEncode(vars.toJson());
-  Future<QueryResult<ListGroupMembersData, ListGroupMembersVariables>> execute({QueryFetchPolicy fetchPolicy = QueryFetchPolicy.preferCache}) {
-    return ref().execute(fetchPolicy: fetchPolicy);
+  Future<QueryResult<ListGroupMembersData, ListGroupMembersVariables>> execute() {
+    return ref().execute();
   }
 
   QueryRef<ListGroupMembersData, ListGroupMembersVariables> ref() {

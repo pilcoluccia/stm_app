@@ -6,8 +6,8 @@ class ListAllUnitsVariablesBuilder {
   ListAllUnitsVariablesBuilder(this._dataConnect, );
   Deserializer<ListAllUnitsData> dataDeserializer = (dynamic json)  => ListAllUnitsData.fromJson(jsonDecode(json));
   
-  Future<QueryResult<ListAllUnitsData, void>> execute({QueryFetchPolicy fetchPolicy = QueryFetchPolicy.preferCache}) {
-    return ref().execute(fetchPolicy: fetchPolicy);
+  Future<QueryResult<ListAllUnitsData, void>> execute() {
+    return ref().execute();
   }
 
   QueryRef<ListAllUnitsData, void> ref() {

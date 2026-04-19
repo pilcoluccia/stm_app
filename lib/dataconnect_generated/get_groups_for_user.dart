@@ -7,8 +7,8 @@ class GetGroupsForUserVariablesBuilder {
   GetGroupsForUserVariablesBuilder(this._dataConnect, {required  this.userId,});
   Deserializer<GetGroupsForUserData> dataDeserializer = (dynamic json)  => GetGroupsForUserData.fromJson(jsonDecode(json));
   Serializer<GetGroupsForUserVariables> varsSerializer = (GetGroupsForUserVariables vars) => jsonEncode(vars.toJson());
-  Future<QueryResult<GetGroupsForUserData, GetGroupsForUserVariables>> execute({QueryFetchPolicy fetchPolicy = QueryFetchPolicy.preferCache}) {
-    return ref().execute(fetchPolicy: fetchPolicy);
+  Future<QueryResult<GetGroupsForUserData, GetGroupsForUserVariables>> execute() {
+    return ref().execute();
   }
 
   QueryRef<GetGroupsForUserData, GetGroupsForUserVariables> ref() {

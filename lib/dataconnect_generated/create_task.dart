@@ -2,11 +2,11 @@ part of 'generated.dart';
 
 class CreateTaskVariablesBuilder {
   String title;
-  Optional<String> _description = Optional.optional(nativeFromJson, nativeToJson);
+  final Optional<String> _description = Optional.optional(nativeFromJson, nativeToJson);
   String status;
   String priority;
   Timestamp dueDate;
-  Optional<double> _estimatedHours = Optional.optional(nativeFromJson, nativeToJson);
+  final Optional<double> _estimatedHours = Optional.optional(nativeFromJson, nativeToJson);
   String assignedToId;
   String createdById;
   String unitId;
@@ -62,7 +62,7 @@ class CreateTaskTaskInsert {
     return json;
   }
 
-  CreateTaskTaskInsert({
+  const CreateTaskTaskInsert({
     required this.id,
   });
 }
@@ -96,7 +96,7 @@ class CreateTaskData {
     return json;
   }
 
-  CreateTaskData({
+  const CreateTaskData({
     required this.task_insert,
   });
 }
@@ -182,7 +182,7 @@ class CreateTaskVariables {
     return json;
   }
 
-  CreateTaskVariables({
+  const CreateTaskVariables({
     required this.title,
     required this.description,
     required this.status,

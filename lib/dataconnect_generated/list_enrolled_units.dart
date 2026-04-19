@@ -7,8 +7,8 @@ class ListEnrolledUnitsVariablesBuilder {
   ListEnrolledUnitsVariablesBuilder(this._dataConnect, {required  this.studentId,});
   Deserializer<ListEnrolledUnitsData> dataDeserializer = (dynamic json)  => ListEnrolledUnitsData.fromJson(jsonDecode(json));
   Serializer<ListEnrolledUnitsVariables> varsSerializer = (ListEnrolledUnitsVariables vars) => jsonEncode(vars.toJson());
-  Future<QueryResult<ListEnrolledUnitsData, ListEnrolledUnitsVariables>> execute({QueryFetchPolicy fetchPolicy = QueryFetchPolicy.preferCache}) {
-    return ref().execute(fetchPolicy: fetchPolicy);
+  Future<QueryResult<ListEnrolledUnitsData, ListEnrolledUnitsVariables>> execute() {
+    return ref().execute();
   }
 
   QueryRef<ListEnrolledUnitsData, ListEnrolledUnitsVariables> ref() {
