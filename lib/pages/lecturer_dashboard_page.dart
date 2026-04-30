@@ -1,22 +1,95 @@
 import 'package:flutter/material.dart';
-import '../services/task_service.dart';
 import '../services/auth_service.dart';
+import '../services/api_service.dart';
 import 'login_page.dart';
+import 'lecturer_tasks_page.dart';
 
-class LecturerDashboardPage extends StatelessWidget {
+class _UnitWithEnrollments {
+  final String id;
+  final String code;
+  final String name;
+  final int students;
+  const _UnitWithEnrollments({
+    required this.id,
+    required this.code,
+    required this.name,
+    required this.students,
+  });
+}
+
+class LecturerDashboardPage extends StatefulWidget {
   const LecturerDashboardPage({super.key});
 
-  static const _units = [
-    _UnitData(code: 'ICT308', name: 'Capstone Project 2', students: 24),
-    _UnitData(code: 'ICT307', name: 'Capstone Project 1', students: 20),
-    _UnitData(code: 'ICT305', name: 'Topics in IT', students: 18),
-  ];
+  @override
+  State<LecturerDashboardPage> createState() => _LecturerDashboardPageState();
+}
+
+class _LecturerDashboardPageState extends State<LecturerDashboardPage> {
+  final _api = ApiService();
+  List<_UnitWithEnrollments> _units = [];
+  List<dynamic> _allTasks = [];
+  bool _loading = true;
 
   static const _statusColors = {
     'To Do': Color(0xFF888888),
     'In Progress': Color(0xFFFFAA00),
     'Done': Color(0xFF4CAF50),
   };
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    setState(() => _loading = true);
+    try {
+      final lecturerId = AuthService.instance.currentAppUser!.dbId;
+      final units = await _api.listAllUnits(lecturerId: lecturerId);
+
+      // Load all tasks for this lecturer's units
+      final allTasks = <dynamic>[];
+      final seenTaskIds = <String>{};
+
+      for (final unit in units) {
+        final unitTasks = await _api.listTasksByUnit(unit['id']);
+        for (final task in unitTasks) {
+          if (task['id'] != null && !seenTaskIds.contains(task['id'])) {
+            allTasks.add(task);
+            seenTaskIds.add(task['id']);
+          }
+        }
+      }
+
+      final unitsWithEnrollments = <_UnitWithEnrollments>[];
+      for (final unit in units) {
+        final enrollments = await _api.listEnrolledStudents(unit['id']);
+        final activeStudents = enrollments
+            .where((e) => e['status'] == 'active')
+            .length;
+        unitsWithEnrollments.add(_UnitWithEnrollments(
+          id: unit['id'],
+          code: unit['code'],
+          name: unit['name'],
+          students: activeStudents,
+        ));
+      }
+
+      setState(() {
+        _units = unitsWithEnrollments;
+        _allTasks = allTasks;
+        _loading = false;
+      });
+    } catch (e) {
+      setState(() => _loading = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error loading data: $e')),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -27,6 +100,16 @@ class LecturerDashboardPage extends StatelessWidget {
         backgroundColor: const Color(0xFF000000),
         elevation: 0,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.add_task, color: Color(0xFF4A7BFF)),
+            tooltip: 'Create Task',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const LecturerTasksPage()),
+              );
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.logout, color: Colors.white54),
             onPressed: () async {
@@ -42,20 +125,20 @@ class LecturerDashboardPage extends StatelessWidget {
           ),
         ],
       ),
-      body: ListenableBuilder(
-        listenable: TaskService.instance,
-        builder: (context, _) {
-          final allTasks = TaskService.instance.tasks;
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : Builder(
+        builder: (context) {
           final toDo =
-              allTasks.where((t) => t.status == 'To Do').length;
+              _allTasks.where((t) => t['status'] == 'To Do').length;
           final inProg =
-              allTasks.where((t) => t.status == 'In Progress').length;
+              _allTasks.where((t) => t['status'] == 'In Progress').length;
           final done =
-              allTasks.where((t) => t.status == 'Done').length;
+              _allTasks.where((t) => t['status'] == 'Done').length;
           final totalH =
-              allTasks.fold<double>(0, (s, t) => s + t.estimatedHours);
+              _allTasks.fold<double>(0, (s, t) => s + (t['estimatedHours'] ?? 0.0));
           final doneH =
-              allTasks.fold<double>(0, (s, t) => s + t.completedHours);
+              _allTasks.fold<double>(0, (s, t) => s + (t['completedHours'] ?? 0.0));
           final pct =
               totalH > 0 ? (doneH / totalH).clamp(0.0, 1.0) : 0.0;
 
@@ -82,13 +165,13 @@ class LecturerDashboardPage extends StatelessWidget {
                   const SizedBox(width: 10),
                   _StatCard(
                       label: 'Students',
-                      value: '${_units.fold(0, (s, u) => s + u.students)}',
+                      value: '${_units.fold<int>(0, (s, u) => s + u.students)}',
                       icon: Icons.people_outline,
                       color: const Color(0xFF4CAF50)),
                   const SizedBox(width: 10),
                   _StatCard(
                       label: 'Tasks',
-                      value: '${allTasks.length}',
+                      value: '${_allTasks.length}',
                       icon: Icons.task_outlined,
                       color: const Color(0xFFFFAA00)),
                 ]),
@@ -165,25 +248,25 @@ class LecturerDashboardPage extends StatelessWidget {
                         fontWeight: FontWeight.bold)),
                 const SizedBox(height: 10),
                 ..._units.map((u) {
-                  final unitTasks = allTasks
-                      .where((t) => t.subject == u.code)
+                  final unitTasks = _allTasks
+                      .where((t) => t['unitId'] == u.id)
                       .toList();
                   final uTotalH = unitTasks.fold<double>(
-                      0, (s, t) => s + t.estimatedHours);
+                      0, (s, t) => s + (t['estimatedHours'] ?? 0.0));
                   final uDoneH = unitTasks.fold<double>(
-                      0, (s, t) => s + t.completedHours);
+                      0, (s, t) => s + (t['completedHours'] ?? 0.0));
                   final uPct = uTotalH > 0
                       ? (uDoneH / uTotalH).clamp(0.0, 1.0)
                       : 0.0;
                   final byStatus = {
                     'To Do': unitTasks
-                        .where((t) => t.status == 'To Do')
+                        .where((t) => t['status'] == 'To Do')
                         .length,
                     'In Progress': unitTasks
-                        .where((t) => t.status == 'In Progress')
+                        .where((t) => t['status'] == 'In Progress')
                         .length,
                     'Done': unitTasks
-                        .where((t) => t.status == 'Done')
+                        .where((t) => t['status'] == 'Done')
                         .length,
                   };
 
@@ -278,16 +361,6 @@ class LecturerDashboardPage extends StatelessWidget {
 }
 
 // ── Helper widgets ────────────────────────────────────────────────────────────
-
-class _UnitData {
-  final String code;
-  final String name;
-  final int students;
-  const _UnitData(
-      {required this.code,
-      required this.name,
-      required this.students});
-}
 
 class _StatCard extends StatelessWidget {
   final String label;

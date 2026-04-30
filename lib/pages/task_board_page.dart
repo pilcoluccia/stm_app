@@ -112,7 +112,8 @@ class TaskBoardPage extends StatelessWidget {
                     children: _statuses.map((status) {
                       final col = unitTasks
                           .where((t) => t.status == status)
-                          .toList();
+                          .toList()
+                          .cast<Task>();
                       return _KanbanColumn(
                           tasks: col,
                           status: status,

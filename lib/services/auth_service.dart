@@ -2,12 +2,12 @@ import 'dart:io';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-import '../dataconnect_generated/generated.dart';
+import 'api_service.dart';
 
-enum UserRole { student, lecturer }
+enum UserRole { student, lecturer, admin }
 
 class AppUser {
-  final String dbId;   // PostgreSQL UUID
+  final String dbId;   // Firestore document ID
   final String uid;    // Firebase Auth UID
   final String email;
   final String name;
@@ -32,6 +32,7 @@ class AuthService {
         ? '538559006995-nn1d7e2moo2l7un5t3j6ubifkbnd14do.apps.googleusercontent.com'
         : null,
   );
+  final _api = ApiService();
 
   AppUser? currentAppUser;
 
@@ -41,50 +42,62 @@ class AuthService {
       kIsWeb || Platform.isAndroid || Platform.isIOS || Platform.isMacOS;
 
   static UserRole _roleFor(String email) {
-    if (email.toLowerCase().contains('lecturer')) return UserRole.lecturer;
+    final emailLower = email.toLowerCase();
+    if (emailLower.contains('admin')) return UserRole.admin;
+    if (emailLower.contains('lecturer')) return UserRole.lecturer;
     return UserRole.student;
   }
 
   // Fetch or create the DB user profile after Firebase Auth login
   Future<AppUser> _loadOrCreateDbUser(User firebaseUser) async {
-    final connector = ExampleConnector.instance;
-    final result = await connector
-        .getUser(uid: firebaseUser.uid)
-        .execute();
+    try {
+      // Intentar obtener el usuario del backend
+      final result = await _api.getUser(firebaseUser.uid);
+      final u = result['user'];
 
-    if (result.data.users.isNotEmpty) {
-      final u = result.data.users.first;
+      UserRole role = UserRole.student;
+      if (u['role'] == 'admin') {
+        role = UserRole.admin;
+      } else if (u['role'] == 'lecturer') {
+        role = UserRole.lecturer;
+      }
+
       return AppUser(
-        dbId: u.id,
-        uid: u.uid,
-        email: u.email,
-        name: u.name,
-        role: u.role == 'lecturer' ? UserRole.lecturer : UserRole.student,
+        dbId: u['id'] ?? firebaseUser.uid,
+        uid: u['uid'],
+        email: u['email'],
+        name: u['name'],
+        role: role,
+      );
+    } catch (e) {
+      // Usuario no existe en el backend — crear
+      final role = _roleFor(firebaseUser.email ?? '');
+      String roleStr = 'student';
+      if (role == UserRole.admin) {
+        roleStr = 'admin';
+      } else if (role == UserRole.lecturer) {
+        roleStr = 'lecturer';
+      }
+
+      await _api.createUser(
+        uid: firebaseUser.uid,
+        email: firebaseUser.email ?? '',
+        name: firebaseUser.displayName ?? firebaseUser.email ?? 'User',
+        role: roleStr,
+      );
+
+      // Obtener el usuario recién creado
+      final created = await _api.getUser(firebaseUser.uid);
+      final u = created['user'];
+
+      return AppUser(
+        dbId: u['id'] ?? firebaseUser.uid,
+        uid: u['uid'],
+        email: u['email'],
+        name: u['name'],
+        role: role,
       );
     }
-
-    // User not in DB yet — create it
-    final role = _roleFor(firebaseUser.email ?? '');
-    await connector.createUser(
-      uid: firebaseUser.uid,
-      email: firebaseUser.email ?? '',
-      name: firebaseUser.displayName ?? firebaseUser.email ?? 'User',
-      role: role == UserRole.lecturer ? 'lecturer' : 'student',
-    ).execute();
-
-    // Fetch again to get the generated UUID
-    final created = await connector
-        .getUser(uid: firebaseUser.uid)
-        .execute();
-
-    final u = created.data.users.first;
-    return AppUser(
-      dbId: u.id,
-      uid: u.uid,
-      email: u.email,
-      name: u.name,
-      role: role,
-    );
   }
 
   Future<AppUser> signIn(String email, String password) async {

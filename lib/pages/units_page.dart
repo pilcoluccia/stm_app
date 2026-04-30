@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
-import '../services/units_service.dart';
-import '../services/task_service.dart';
-import '../models/unit_model.dart';
-import 'subject_detail_page.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../services/api_service.dart';
 
 class UnitsPage extends StatefulWidget {
   const UnitsPage({super.key});
@@ -13,18 +11,94 @@ class UnitsPage extends StatefulWidget {
 class _UnitsPageState extends State<UnitsPage>
     with SingleTickerProviderStateMixin {
   late final TabController _tab;
+  final _api = ApiService();
+
+  List<dynamic> _allUnits = [];
+  List<dynamic> _enrolledUnits = [];
+  Set<String> _enrolledUnitIds = {};
+  bool _loading = true;
 
   @override
   void initState() {
     super.initState();
     _tab = TabController(length: 2, vsync: this);
-    TaskService.instance.load();
+    _loadData();
   }
 
   @override
   void dispose() {
     _tab.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadData() async {
+    setState(() => _loading = true);
+    try {
+      final uid = FirebaseAuth.instance.currentUser?.uid;
+      if (uid == null) return;
+
+      // Load all units
+      final units = await _api.listAllUnits();
+
+      // Load student's enrollments
+      final enrollments = await _api.listStudentEnrollments(uid);
+
+      setState(() {
+        _allUnits = units;
+        _enrolledUnits = enrollments.map((e) => e['unit']).where((u) => u != null).toList();
+        _enrolledUnitIds = enrollments.map((e) => e['unitId'] as String).toSet();
+        _loading = false;
+      });
+    } catch (e) {
+      setState(() => _loading = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error loading units: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _enrollInUnit(String unitId) async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+
+    try {
+      await _api.enrollStudent(studentId: uid, unitId: unitId);
+      await _loadData();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Enrolled successfully!')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error enrolling: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _dropUnit(String unitId) async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+
+    try {
+      await _api.dropEnrollment(studentId: uid, unitId: unitId);
+      await _loadData();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Dropped successfully!')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error dropping: $e')),
+        );
+      }
+    }
   }
 
   @override
@@ -46,16 +120,23 @@ class _UnitsPageState extends State<UnitsPage>
           ],
         ),
       ),
-      body: ListenableBuilder(
-        listenable: UnitsService.instance,
-        builder: (context, _) => TabBarView(
-          controller: _tab,
-          children: [
-            _AllUnitsTab(),
-            _MyUnitsTab(onTabChange: () => _tab.animateTo(0)),
-          ],
-        ),
-      ),
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : TabBarView(
+              controller: _tab,
+              children: [
+                _AllUnitsTab(
+                  units: _allUnits,
+                  enrolledUnitIds: _enrolledUnitIds,
+                  onEnroll: _enrollInUnit,
+                  onDrop: _dropUnit,
+                ),
+                _MyUnitsTab(
+                  units: _enrolledUnits,
+                  onTabChange: () => _tab.animateTo(0),
+                ),
+              ],
+            ),
     );
   }
 }
@@ -63,9 +144,34 @@ class _UnitsPageState extends State<UnitsPage>
 // ── All Units tab ─────────────────────────────────────────────────────────────
 
 class _AllUnitsTab extends StatelessWidget {
+  final List<dynamic> units;
+  final Set<String> enrolledUnitIds;
+  final Function(String) onEnroll;
+  final Function(String) onDrop;
+
+  const _AllUnitsTab({
+    required this.units,
+    required this.enrolledUnitIds,
+    required this.onEnroll,
+    required this.onDrop,
+  });
+
   @override
   Widget build(BuildContext context) {
-    final units = UnitsService.instance.allUnits;
+    if (units.isEmpty) {
+      return const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.school_outlined, size: 64, color: Colors.white30),
+            SizedBox(height: 16),
+            Text('No units available yet',
+                style: TextStyle(color: Colors.white70, fontSize: 16)),
+          ],
+        ),
+      );
+    }
+
     return ListView.builder(
       padding: const EdgeInsets.all(16),
       itemCount: units.length + 1,
@@ -79,19 +185,34 @@ class _AllUnitsTab extends StatelessWidget {
             ),
           );
         }
-        return _UnitCard(unit: units[i - 1]);
+        final unit = units[i - 1];
+        final enrolled = enrolledUnitIds.contains(unit['id']);
+        return _UnitCard(
+          unit: unit,
+          enrolled: enrolled,
+          onEnroll: onEnroll,
+          onDrop: onDrop,
+        );
       },
     );
   }
 }
 
 class _UnitCard extends StatelessWidget {
-  final UnitModel unit;
-  const _UnitCard({required this.unit});
+  final Map<String, dynamic> unit;
+  final bool enrolled;
+  final Function(String) onEnroll;
+  final Function(String) onDrop;
+
+  const _UnitCard({
+    required this.unit,
+    required this.enrolled,
+    required this.onEnroll,
+    required this.onDrop,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final enrolled = UnitsService.instance.isEnrolled(unit.id);
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
@@ -108,7 +229,8 @@ class _UnitCard extends StatelessWidget {
           children: [
             // Left: colour dot
             Container(
-              width: 42, height: 42,
+              width: 42,
+              height: 42,
               decoration: BoxDecoration(
                 color: const Color(0xFF4A7BFF).withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(10),
@@ -123,7 +245,7 @@ class _UnitCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(children: [
-                    Text(unit.code,
+                    Text(unit['code'] ?? '',
                         style: const TextStyle(
                             color: Colors.white,
                             fontSize: 15,
@@ -134,7 +256,8 @@ class _UnitCard extends StatelessWidget {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 7, vertical: 2),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF4A7BFF).withValues(alpha: 0.15),
+                          color:
+                              const Color(0xFF4A7BFF).withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: const Text('Enrolled',
@@ -145,11 +268,11 @@ class _UnitCard extends StatelessWidget {
                       ),
                   ]),
                   const SizedBox(height: 2),
-                  Text(unit.name,
+                  Text(unit['name'] ?? '',
                       style: const TextStyle(
                           color: Colors.white70, fontSize: 13)),
                   const SizedBox(height: 2),
-                  Text('Lecturer: ${unit.lecturerName}',
+                  Text('${unit['credits'] ?? 0} credits • Semester ${unit['semester'] ?? ''}',
                       style: const TextStyle(
                           color: Colors.white38, fontSize: 11)),
                 ],
@@ -157,9 +280,8 @@ class _UnitCard extends StatelessWidget {
             ),
             // Right: button
             TextButton(
-              onPressed: () => enrolled
-                  ? UnitsService.instance.drop(unit.id)
-                  : UnitsService.instance.enroll(unit.id),
+              onPressed: () =>
+                  enrolled ? onDrop(unit['id']) : onEnroll(unit['id']),
               style: TextButton.styleFrom(
                 backgroundColor: enrolled
                     ? Colors.red.withValues(alpha: 0.12)
@@ -188,13 +310,17 @@ class _UnitCard extends StatelessWidget {
 // ── My Units tab ──────────────────────────────────────────────────────────────
 
 class _MyUnitsTab extends StatelessWidget {
+  final List<dynamic> units;
   final VoidCallback onTabChange;
-  const _MyUnitsTab({required this.onTabChange});
+
+  const _MyUnitsTab({
+    required this.units,
+    required this.onTabChange,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final enrolled = UnitsService.instance.enrolledUnits;
-    if (enrolled.isEmpty) {
+    if (units.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -215,98 +341,53 @@ class _MyUnitsTab extends StatelessWidget {
     }
     return ListView.builder(
       padding: const EdgeInsets.all(16),
-      itemCount: enrolled.length,
-      itemBuilder: (context, i) => _MyUnitCard(unit: enrolled[i]),
+      itemCount: units.length,
+      itemBuilder: (context, i) => _MyUnitCard(unit: units[i]),
     );
   }
 }
 
 class _MyUnitCard extends StatelessWidget {
-  final UnitModel unit;
+  final Map<String, dynamic> unit;
   const _MyUnitCard({required this.unit});
 
   @override
   Widget build(BuildContext context) {
-    final tasks = TaskService.instance.tasks
-        .where((t) => t.subject == unit.code)
-        .toList();
-    final done = tasks.where((t) => t.isDone).length;
-    final totalH =
-        tasks.fold<double>(0, (s, t) => s + t.estimatedHours);
-    final doneH =
-        tasks.fold<double>(0, (s, t) => s + t.completedHours);
-    final pct = totalH > 0 ? (doneH / totalH).clamp(0.0, 1.0) : 0.0;
-
-    return GestureDetector(
-      onTap: () => Navigator.push(
-        context,
-        MaterialPageRoute(
-            builder: (_) => SubjectDetailPage(unit: unit)),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1A1A1A),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+            color: const Color(0xFF4A7BFF).withValues(alpha: 0.3)),
       ),
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: const Color(0xFF1A1A1A),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: const Color(0xFF4A7BFF).withValues(alpha: 0.3)),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(unit.code,
-                        style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold)),
-                    Text(unit.name,
-                        style: const TextStyle(
-                            color: Colors.white54, fontSize: 13)),
-                    Text('Lecturer: ${unit.lecturerName}',
-                        style: const TextStyle(
-                            color: Colors.white38, fontSize: 11)),
-                  ],
-                ),
-              ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('${(pct * 100).toInt()}%',
+                  Text(unit['code'] ?? '',
                       style: const TextStyle(
-                          color: Color(0xFF4A7BFF),
-                          fontSize: 18,
+                          color: Colors.white,
+                          fontSize: 16,
                           fontWeight: FontWeight.bold)),
-                  Text('$done/${tasks.length} tasks',
+                  Text(unit['name'] ?? '',
+                      style: const TextStyle(
+                          color: Colors.white54, fontSize: 13)),
+                  Text(
+                      '${unit['credits'] ?? 0} credits • Semester ${unit['semester'] ?? ''}',
                       style: const TextStyle(
                           color: Colors.white38, fontSize: 11)),
                 ],
               ),
-              const SizedBox(width: 8),
-              const Icon(Icons.chevron_right, color: Colors.white38),
-            ]),
-            const SizedBox(height: 12),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(4),
-              child: LinearProgressIndicator(
-                value: pct,
-                backgroundColor: Colors.white12,
-                valueColor: const AlwaysStoppedAnimation(Color(0xFF4A7BFF)),
-                minHeight: 6,
-              ),
             ),
-            const SizedBox(height: 6),
-            Text(
-              '${doneH.toStringAsFixed(1)}h / ${totalH.toStringAsFixed(1)}h completed',
-              style:
-                  const TextStyle(color: Colors.white38, fontSize: 11),
-            ),
-          ],
-        ),
+            const Icon(Icons.chevron_right, color: Colors.white38),
+          ]),
+        ],
       ),
     );
   }
