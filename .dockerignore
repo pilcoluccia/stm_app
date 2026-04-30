@@ -1,0 +1,11 @@
+.dart_tool/
+.packages
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+.git
+.gitignore
+README.md
+.DS_Store
+Thumbs.db
+*.log
