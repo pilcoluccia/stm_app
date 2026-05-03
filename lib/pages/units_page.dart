@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/api_service.dart';
+import '../models/unit_model.dart';
+import 'subject_detail_page.dart';
 
 class UnitsPage extends StatefulWidget {
   const UnitsPage({super.key});
@@ -80,6 +82,27 @@ class _UnitsPageState extends State<UnitsPage>
     }
   }
 
+  UnitModel _unitFromMap(Map<String, dynamic> unit) {
+    return UnitModel(
+      id: unit['id']?.toString() ?? '',
+      code: unit['code']?.toString() ?? '',
+      name: unit['name']?.toString() ?? '',
+      description: unit['description']?.toString() ?? '',
+      lecturerName: unit['lecturerName']?.toString() ??
+          unit['lecturer']?['name']?.toString() ??
+          '',
+    );
+  }
+
+  void _openUnitDetails(Map<String, dynamic> unit) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => SubjectDetailPage(unit: _unitFromMap(unit)),
+      ),
+    );
+  }
+
   Future<void> _dropUnit(String unitId) async {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) return;
@@ -130,10 +153,12 @@ class _UnitsPageState extends State<UnitsPage>
                   enrolledUnitIds: _enrolledUnitIds,
                   onEnroll: _enrollInUnit,
                   onDrop: _dropUnit,
+                  onView: _openUnitDetails,
                 ),
                 _MyUnitsTab(
                   units: _enrolledUnits,
                   onTabChange: () => _tab.animateTo(0),
+                  onView: _openUnitDetails,
                 ),
               ],
             ),
@@ -148,12 +173,14 @@ class _AllUnitsTab extends StatelessWidget {
   final Set<String> enrolledUnitIds;
   final Function(String) onEnroll;
   final Function(String) onDrop;
+  final Function(Map<String, dynamic>) onView;
 
   const _AllUnitsTab({
     required this.units,
     required this.enrolledUnitIds,
     required this.onEnroll,
     required this.onDrop,
+    required this.onView,
   });
 
   @override
@@ -192,6 +219,7 @@ class _AllUnitsTab extends StatelessWidget {
           enrolled: enrolled,
           onEnroll: onEnroll,
           onDrop: onDrop,
+          onView: onView,
         );
       },
     );
@@ -203,17 +231,22 @@ class _UnitCard extends StatelessWidget {
   final bool enrolled;
   final Function(String) onEnroll;
   final Function(String) onDrop;
+  final Function(Map<String, dynamic>) onView;
 
   const _UnitCard({
     required this.unit,
     required this.enrolled,
     required this.onEnroll,
     required this.onDrop,
+    required this.onView,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return InkWell(
+      onTap: () => onView(unit),
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: const Color(0xFF1A1A1A),
@@ -303,6 +336,7 @@ class _UnitCard extends StatelessWidget {
           ],
         ),
       ),
+      ),
     );
   }
 }
@@ -312,10 +346,12 @@ class _UnitCard extends StatelessWidget {
 class _MyUnitsTab extends StatelessWidget {
   final List<dynamic> units;
   final VoidCallback onTabChange;
+  final Function(Map<String, dynamic>) onView;
 
   const _MyUnitsTab({
     required this.units,
     required this.onTabChange,
+    required this.onView,
   });
 
   @override
@@ -342,18 +378,22 @@ class _MyUnitsTab extends StatelessWidget {
     return ListView.builder(
       padding: const EdgeInsets.all(16),
       itemCount: units.length,
-      itemBuilder: (context, i) => _MyUnitCard(unit: units[i]),
+      itemBuilder: (context, i) => _MyUnitCard(unit: units[i], onView: onView),
     );
   }
 }
 
 class _MyUnitCard extends StatelessWidget {
   final Map<String, dynamic> unit;
-  const _MyUnitCard({required this.unit});
+  final Function(Map<String, dynamic>) onView;
+  const _MyUnitCard({required this.unit, required this.onView});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return InkWell(
+      onTap: () => onView(unit),
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -388,6 +428,7 @@ class _MyUnitCard extends StatelessWidget {
             const Icon(Icons.chevron_right, color: Colors.white38),
           ]),
         ],
+      ),
       ),
     );
   }

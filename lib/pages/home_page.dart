@@ -7,7 +7,10 @@ import 'tasks_page.dart';
 import 'units_page.dart';
 import 'profile_page.dart';
 import 'lecturer_dashboard_page.dart';
+import 'lecturer_calendar_page.dart';
 import 'lecturer_tasks_page.dart';
+import 'lecturer_units_page.dart';
+import 'lecturer_analytics_page.dart';
 import 'admin_dashboard_page.dart';
 import 'admin_users_page.dart';
 import 'admin_units_page.dart';
@@ -36,7 +39,10 @@ class _HomePageState extends State<HomePage> {
     if (role == UserRole.lecturer) {
       return const [
         LecturerDashboardPage(),
+        LecturerCalendarPage(),
         LecturerTasksPage(),
+        LecturerUnitsPage(),
+        LecturerAnalyticsPage(),
         ProfilePage(),
       ];
     }
@@ -79,9 +85,21 @@ class _HomePageState extends State<HomePage> {
             activeIcon: Icon(Icons.dashboard),
             label: 'Dashboard'),
         BottomNavigationBarItem(
+            icon: Icon(Icons.calendar_today_outlined),
+            activeIcon: Icon(Icons.calendar_today),
+            label: 'Calendar'),
+        BottomNavigationBarItem(
             icon: Icon(Icons.task_outlined),
             activeIcon: Icon(Icons.task),
             label: 'Tasks'),
+        BottomNavigationBarItem(
+            icon: Icon(Icons.school_outlined),
+            activeIcon: Icon(Icons.school),
+            label: 'Units'),
+        BottomNavigationBarItem(
+            icon: Icon(Icons.bar_chart_outlined),
+            activeIcon: Icon(Icons.bar_chart),
+            label: 'Analytics'),
         BottomNavigationBarItem(
             icon: Icon(Icons.person_outline),
             activeIcon: Icon(Icons.person),

@@ -327,20 +327,18 @@ class ApiService {
   // ENROLLMENTS
   // ============================================================================
 
+  // POST /units/:id/enroll → enroll student
   Future<Map<String, dynamic>> enrollStudent({
     required String studentId,
     required String unitId,
   }) async {
     final response = await http.post(
-      Uri.parse('$baseUrl/enrollments'),
+      Uri.parse('$baseUrl/units/$unitId/enroll'),
       headers: await _headers(),
-      body: jsonEncode({
-        'studentId': studentId,
-        'unitId': unitId,
-      }),
+      body: jsonEncode({'studentId': studentId}),
     );
 
-    if (response.statusCode == 200) {
+    if (response.statusCode == 200 || response.statusCode == 201) {
       return jsonDecode(response.body);
     } else {
       throw Exception('Failed to enroll student: ${response.body}');
@@ -361,34 +359,50 @@ class ApiService {
     }
   }
 
+  // GET /students/:id/units → subjects of a student
   Future<List<dynamic>> listStudentEnrollments(String studentId) async {
     final response = await http.get(
-      Uri.parse('$baseUrl/enrollments/student/$studentId'),
+      Uri.parse('$baseUrl/students/$studentId/units'),
       headers: await _headers(),
     );
 
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
-      return data['enrollments'] ?? [];
+
+      if (data['enrollments'] != null) {
+        return data['enrollments'];
+      }
+
+      final units = data['units'] ?? [];
+      return units
+          .map((unit) => {
+                'unitId': unit['id'],
+                'unit': unit,
+                'status': 'active',
+              })
+          .toList();
     } else {
-      throw Exception('Failed to list student enrollments: ${response.body}');
+      throw Exception('Failed to list student units: ${response.body}');
     }
   }
 
+  Future<List<dynamic>> listStudentUnits(String studentId) async {
+    final enrollments = await listStudentEnrollments(studentId);
+    return enrollments.map((e) => e['unit']).where((u) => u != null).toList();
+  }
+
+  // DELETE /units/:id/enroll → unenroll
   Future<void> dropEnrollment({
     required String studentId,
     required String unitId,
   }) async {
     final response = await http.delete(
-      Uri.parse('$baseUrl/enrollments'),
+      Uri.parse('$baseUrl/units/$unitId/enroll'),
       headers: await _headers(),
-      body: jsonEncode({
-        'studentId': studentId,
-        'unitId': unitId,
-      }),
+      body: jsonEncode({'studentId': studentId}),
     );
 
-    if (response.statusCode != 200) {
+    if (response.statusCode != 200 && response.statusCode != 204) {
       throw Exception('Failed to drop enrollment: ${response.body}');
     }
   }
