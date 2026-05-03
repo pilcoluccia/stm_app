@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import '../services/api_service.dart';
 import 'login_page.dart';
-import 'lecturer_tasks_page.dart';
 
 class _UnitWithEnrollments {
   final String id;
@@ -100,16 +99,6 @@ class _LecturerDashboardPageState extends State<LecturerDashboardPage> {
         backgroundColor: const Color(0xFF000000),
         elevation: 0,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.add_task, color: Color(0xFF4A7BFF)),
-            tooltip: 'Create Task',
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const LecturerTasksPage()),
-              );
-            },
-          ),
           IconButton(
             icon: const Icon(Icons.logout, color: Colors.white54),
             onPressed: () async {

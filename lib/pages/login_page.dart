@@ -5,11 +5,11 @@ import '../services/task_service.dart';
 import '../services/units_service.dart';
 import '../services/groups_service.dart';
 import 'home_page.dart';
-import 'lecturer_dashboard_page.dart';
 import 'register_page.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
+
   @override
   State<LoginPage> createState() => _LoginPageState();
 }
@@ -17,6 +17,7 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> {
   final _emailCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
+
   String _role = 'Student';
   bool _loading = false;
   bool _loadingGoogle = false;
@@ -32,11 +33,14 @@ class _LoginPageState extends State<LoginPage> {
   Future<void> _login() async {
     final email = _emailCtrl.text.trim();
     final pass = _passCtrl.text;
+
     if (email.isEmpty || pass.isEmpty) {
       _snack('Please enter email & password');
       return;
     }
+
     setState(() => _loading = true);
+
     try {
       final user = await AuthService.instance.signIn(email, pass);
       await _loadData();
@@ -52,6 +56,7 @@ class _LoginPageState extends State<LoginPage> {
 
   Future<void> _loginWithGoogle() async {
     setState(() => _loadingGoogle = true);
+
     try {
       final user = await AuthService.instance.signInWithGoogle();
       await _loadData();
@@ -75,17 +80,20 @@ class _LoginPageState extends State<LoginPage> {
 
   void _navigate(UserRole role) {
     if (!mounted) return;
+
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
-        builder: (_) =>
-            role == UserRole.lecturer ? const LecturerDashboardPage() : const HomePage(),
+        builder: (_) => const HomePage(),
       ),
     );
   }
 
-  void _snack(String msg) =>
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+  void _snack(String msg) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(msg)),
+    );
+  }
 
   String _friendlyError(String code) => switch (code) {
         'user-not-found' => 'No account found with that email.',
@@ -111,11 +119,12 @@ class _LoginPageState extends State<LoginPage> {
             const Text(
               'Student Task Management',
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                fontSize: 26,
+                fontWeight: FontWeight.bold,
+              ),
             ),
             const SizedBox(height: 40),
-
-            // Role selector
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 18),
               decoration: BoxDecoration(
@@ -130,15 +139,19 @@ class _LoginPageState extends State<LoginPage> {
                 style: const TextStyle(color: Colors.white, fontSize: 16),
                 dropdownColor: const Color(0xFF1A1A1A),
                 items: const [
-                  DropdownMenuItem(value: 'Student', child: Text('Student')),
-                  DropdownMenuItem(value: 'Lecturer', child: Text('Lecturer')),
+                  DropdownMenuItem(
+                    value: 'Student',
+                    child: Text('Student'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'Lecturer',
+                    child: Text('Lecturer'),
+                  ),
                 ],
                 onChanged: (v) => setState(() => _role = v!),
               ),
             ),
             const SizedBox(height: 20),
-
-            // Email
             TextField(
               controller: _emailCtrl,
               keyboardType: TextInputType.emailAddress,
@@ -146,8 +159,6 @@ class _LoginPageState extends State<LoginPage> {
               decoration: _inputDeco('University Email'),
             ),
             const SizedBox(height: 16),
-
-            // Password
             TextField(
               controller: _passCtrl,
               obscureText: _obscure,
@@ -155,16 +166,15 @@ class _LoginPageState extends State<LoginPage> {
               decoration: _inputDeco('Password').copyWith(
                 suffixIcon: IconButton(
                   icon: Icon(
-                      _obscure ? Icons.visibility_off : Icons.visibility,
-                      color: Colors.white38),
+                    _obscure ? Icons.visibility_off : Icons.visibility,
+                    color: Colors.white38,
+                  ),
                   onPressed: () => setState(() => _obscure = !_obscure),
                 ),
               ),
               onSubmitted: (_) => _login(),
             ),
             const SizedBox(height: 28),
-
-            // Login button
             SizedBox(
               width: double.infinity,
               height: 54,
@@ -173,31 +183,42 @@ class _LoginPageState extends State<LoginPage> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF4A7BFF),
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(28)),
+                    borderRadius: BorderRadius.circular(28),
+                  ),
                 ),
                 child: _loading
                     ? const SizedBox(
                         width: 22,
                         height: 22,
                         child: CircularProgressIndicator(
-                            color: Colors.white, strokeWidth: 2))
-                    : const Text('Login',
-                        style:
-                            TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                          color: Colors.white,
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : const Text(
+                        'Login',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
               ),
             ),
-
-            // Google Sign-In — solo visible en plataformas que lo soportan
             if (AuthService.supportsGoogle) ...[
               const SizedBox(height: 16),
-              Row(children: const [
-                Expanded(child: Divider(color: Color(0xFF3A3A3A))),
-                Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 12),
-                  child: Text('OR', style: TextStyle(color: Color(0xFF8A8A8A))),
-                ),
-                Expanded(child: Divider(color: Color(0xFF3A3A3A))),
-              ]),
+              const Row(
+                children: [
+                  Expanded(child: Divider(color: Color(0xFF3A3A3A))),
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 12),
+                    child: Text(
+                      'OR',
+                      style: TextStyle(color: Color(0xFF8A8A8A)),
+                    ),
+                  ),
+                  Expanded(child: Divider(color: Color(0xFF3A3A3A))),
+                ],
+              ),
               const SizedBox(height: 16),
               SizedBox(
                 width: double.infinity,
@@ -207,44 +228,53 @@ class _LoginPageState extends State<LoginPage> {
                   style: OutlinedButton.styleFrom(
                     side: const BorderSide(color: Color(0xFF3A3A3A)),
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(28)),
+                      borderRadius: BorderRadius.circular(28),
+                    ),
                   ),
                   icon: _loadingGoogle
                       ? const SizedBox(
                           width: 20,
                           height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2))
-                      : const Icon(Icons.g_mobiledata,
-                          size: 26, color: Colors.white70),
-                  label: const Text('Continue with Google',
-                      style: TextStyle(fontSize: 15)),
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(
+                          Icons.g_mobiledata,
+                          size: 26,
+                          color: Colors.white70,
+                        ),
+                  label: const Text(
+                    'Continue with Google',
+                    style: TextStyle(fontSize: 15),
+                  ),
                 ),
               ),
             ],
-
             const SizedBox(height: 12),
-
-            // Forgot password
             TextButton(
-              onPressed: () =>
-                  _snack('Check your email inbox for a reset link.'),
-              child: const Text('Forgot Password?',
-                  style: TextStyle(color: Color(0xFF8A8A8A))),
+              onPressed: () => _snack('Check your email inbox for a reset link.'),
+              child: const Text(
+                'Forgot Password?',
+                style: TextStyle(color: Color(0xFF8A8A8A)),
+              ),
             ),
-
-            // Register link
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Text("Don't have an account?",
-                    style: TextStyle(color: Color(0xFF8A8A8A))),
+                const Text(
+                  "Don't have an account?",
+                  style: TextStyle(color: Color(0xFF8A8A8A)),
+                ),
                 TextButton(
                   onPressed: () => Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (_) => const RegisterPage()),
+                    MaterialPageRoute(
+                      builder: (_) => const RegisterPage(),
+                    ),
                   ),
-                  child: const Text('Register',
-                      style: TextStyle(color: Color(0xFF4A7BFF))),
+                  child: const Text(
+                    'Register',
+                    style: TextStyle(color: Color(0xFF4A7BFF)),
+                  ),
                 ),
               ],
             ),
@@ -254,24 +284,28 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
-  InputDecoration _inputDeco(String hint) => InputDecoration(
-        hintText: hint,
-        filled: true,
-        fillColor: const Color(0xFF0F0F0F),
-        hintStyle: const TextStyle(color: Color(0xFF8A8A8A)),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
-        border: const OutlineInputBorder(
-          borderRadius: BorderRadius.all(Radius.circular(28)),
-          borderSide: BorderSide(color: Color(0xFF3A3A3A)),
-        ),
-        enabledBorder: const OutlineInputBorder(
-          borderRadius: BorderRadius.all(Radius.circular(28)),
-          borderSide: BorderSide(color: Color(0xFF3A3A3A)),
-        ),
-        focusedBorder: const OutlineInputBorder(
-          borderRadius: BorderRadius.all(Radius.circular(28)),
-          borderSide: BorderSide(color: Color(0xFF4A7BFF)),
-        ),
-      );
+  InputDecoration _inputDeco(String hint) {
+    return InputDecoration(
+      hintText: hint,
+      filled: true,
+      fillColor: const Color(0xFF0F0F0F),
+      hintStyle: const TextStyle(color: Color(0xFF8A8A8A)),
+      contentPadding: const EdgeInsets.symmetric(
+        horizontal: 18,
+        vertical: 16,
+      ),
+      border: const OutlineInputBorder(
+        borderRadius: BorderRadius.all(Radius.circular(28)),
+        borderSide: BorderSide(color: Color(0xFF3A3A3A)),
+      ),
+      enabledBorder: const OutlineInputBorder(
+        borderRadius: BorderRadius.all(Radius.circular(28)),
+        borderSide: BorderSide(color: Color(0xFF3A3A3A)),
+      ),
+      focusedBorder: const OutlineInputBorder(
+        borderRadius: BorderRadius.all(Radius.circular(28)),
+        borderSide: BorderSide(color: Color(0xFF4A7BFF)),
+      ),
+    );
+  }
 }

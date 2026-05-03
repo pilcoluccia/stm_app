@@ -1,11 +1,19 @@
 import 'package:flutter/material.dart';
 import '../models/unit_model.dart';
-import '../models/task_model.dart';
-import '../services/task_service.dart';
+import '../services/api_service.dart';
 
-class TaskBoardPage extends StatelessWidget {
+class TaskBoardPage extends StatefulWidget {
   final UnitModel unit;
   const TaskBoardPage({super.key, required this.unit});
+
+  @override
+  State<TaskBoardPage> createState() => _TaskBoardPageState();
+}
+
+class _TaskBoardPageState extends State<TaskBoardPage> {
+  final _api = ApiService();
+  List<dynamic> _tasks = [];
+  bool _loading = true;
 
   static const _statuses = ['To Do', 'In Progress', 'Done'];
   static const _statusColors = {
@@ -20,13 +28,58 @@ class TaskBoardPage extends StatelessWidget {
   };
 
   @override
+  void initState() {
+    super.initState();
+    _loadTasks();
+  }
+
+  Future<void> _loadTasks() async {
+    setState(() => _loading = true);
+    try {
+      final tasks = await _api.listTasksByUnit(widget.unit.id);
+      if (mounted) {
+        setState(() {
+          _tasks = tasks;
+          _loading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _loading = false);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error loading board: $e')));
+      }
+    }
+  }
+
+  Future<void> _moveTask(dynamic task, String status) async {
+    try {
+      final hours = status == 'Done' ? _num(task['estimatedHours']) : 0.0;
+      await _api.updateTaskStatus(taskId: task['id'], status: status, completedHours: hours);
+      await _loadTasks();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error updating task: $e')));
+      }
+    }
+  }
+
+  double _num(dynamic value) {
+    if (value is num) return value.toDouble();
+    return double.tryParse(value?.toString() ?? '') ?? 0.0;
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final totalH = _tasks.fold<double>(0, (s, t) => s + _num(t['estimatedHours']));
+    final doneH = _tasks.where((t) => t['status'] == 'Done').fold<double>(0, (s, t) => s + _num(t['estimatedHours']));
+    final pct = totalH > 0 ? (doneH / totalH).clamp(0.0, 1.0) : 0.0;
+
     return DefaultTabController(
       length: 3,
       child: Scaffold(
         backgroundColor: Colors.black,
         appBar: AppBar(
-          title: Text('${unit.code} — Board'),
+          title: Text('${widget.unit.code} — Board'),
           backgroundColor: const Color(0xFF000000),
           elevation: 0,
           bottom: TabBar(
@@ -36,152 +89,101 @@ class TaskBoardPage extends StatelessWidget {
             tabs: _statuses.map((s) {
               final color = _statusColors[s]!;
               return Tab(
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(_statusIcons[s], size: 14, color: color),
-                    const SizedBox(width: 4),
-                    Text(s,
-                        style: TextStyle(
-                            fontSize: 12, fontWeight: FontWeight.w600)),
-                  ],
-                ),
+                child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                  Icon(_statusIcons[s], size: 14, color: color),
+                  const SizedBox(width: 4),
+                  Text(s, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                ]),
               );
             }).toList(),
           ),
         ),
-        body: ListenableBuilder(
-          listenable: TaskService.instance,
-          builder: (context, _) {
-            final unitTasks = TaskService.instance.tasks
-                .where((t) => t.subject == unit.code)
-                .toList();
-
-            // ── Progress bar ──────────────────────────────
-            final totalH = unitTasks.fold<double>(
-                0, (s, t) => s + t.estimatedHours);
-            final doneH = unitTasks.fold<double>(
-                0, (s, t) => s + t.completedHours);
-            final pct =
-                totalH > 0 ? (doneH / totalH).clamp(0.0, 1.0) : 0.0;
-
-            return Column(
-              children: [
-                // ── Hours progress ─────────────────────────
-                Container(
-                  margin: const EdgeInsets.all(16),
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF1A1A1A),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Column(
-                    children: [
-                      Row(
-                        mainAxisAlignment:
-                            MainAxisAlignment.spaceBetween,
-                        children: [
-                          _stat('Total', '${totalH.toStringAsFixed(1)}h',
-                              Colors.white54),
-                          _stat('Completed',
-                              '${doneH.toStringAsFixed(1)}h',
-                              const Color(0xFF4CAF50)),
-                          _stat('Progress',
-                              '${(pct * 100).toInt()}%',
-                              const Color(0xFF4A7BFF)),
-                        ],
-                      ),
-                      const SizedBox(height: 10),
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(4),
-                        child: LinearProgressIndicator(
-                          value: pct,
-                          backgroundColor: Colors.white12,
-                          valueColor: const AlwaysStoppedAnimation(
-                              Color(0xFF4A7BFF)),
-                          minHeight: 8,
+        body: _loading
+            ? const Center(child: CircularProgressIndicator())
+            : RefreshIndicator(
+                onRefresh: _loadTasks,
+                child: Column(
+                  children: [
+                    Container(
+                      margin: const EdgeInsets.all(16),
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(color: const Color(0xFF1A1A1A), borderRadius: BorderRadius.circular(12)),
+                      child: Column(children: [
+                        Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                          _stat('Total', '${totalH.toStringAsFixed(1)}h', Colors.white54),
+                          _stat('Completed', '${doneH.toStringAsFixed(1)}h', const Color(0xFF4CAF50)),
+                          _stat('Progress', '${(pct * 100).toInt()}%', const Color(0xFF4A7BFF)),
+                        ]),
+                        const SizedBox(height: 10),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(4),
+                          child: LinearProgressIndicator(
+                            value: pct,
+                            backgroundColor: Colors.white12,
+                            valueColor: const AlwaysStoppedAnimation(Color(0xFF4A7BFF)),
+                            minHeight: 8,
+                          ),
                         ),
+                      ]),
+                    ),
+                    Expanded(
+                      child: TabBarView(
+                        children: _statuses.map((status) {
+                          final col = _tasks.where((t) => (t['status'] ?? 'To Do') == status).toList();
+                          return _KanbanColumn(
+                            tasks: col,
+                            status: status,
+                            color: _statusColors[status]!,
+                            onMove: _moveTask,
+                          );
+                        }).toList(),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-
-                // ── Kanban columns ─────────────────────────
-                Expanded(
-                  child: TabBarView(
-                    children: _statuses.map((status) {
-                      final col = unitTasks
-                          .where((t) => t.status == status)
-                          .toList()
-                          .cast<Task>();
-                      return _KanbanColumn(
-                          tasks: col,
-                          status: status,
-                          color: _statusColors[status]!);
-                    }).toList(),
-                  ),
-                ),
-              ],
-            );
-          },
-        ),
+              ),
       ),
     );
   }
 
-  Widget _stat(String label, String val, Color color) => Column(
-        children: [
-          Text(val,
-              style: TextStyle(
-                  color: color,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold)),
-          Text(label,
-              style: const TextStyle(
-                  color: Colors.white38, fontSize: 11)),
-        ],
-      );
+  Widget _stat(String label, String val, Color color) => Column(children: [
+        Text(val, style: TextStyle(color: color, fontSize: 18, fontWeight: FontWeight.bold)),
+        Text(label, style: const TextStyle(color: Colors.white38, fontSize: 11)),
+      ]);
 }
 
-// ── Kanban column ─────────────────────────────────────────────────────────────
-
 class _KanbanColumn extends StatelessWidget {
-  final List<Task> tasks;
+  final List<dynamic> tasks;
   final String status;
   final Color color;
-  const _KanbanColumn(
-      {required this.tasks,
-      required this.status,
-      required this.color});
+  final Future<void> Function(dynamic task, String status) onMove;
+  const _KanbanColumn({required this.tasks, required this.status, required this.color, required this.onMove});
 
   @override
   Widget build(BuildContext context) {
     if (tasks.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.inbox_outlined, size: 48, color: color.withValues(alpha: 0.3)),
-            const SizedBox(height: 12),
-            Text('No tasks in "$status"',
-                style: const TextStyle(
-                    color: Colors.white24, fontSize: 13)),
-          ],
-        ),
+      return ListView(
+        children: [
+          const SizedBox(height: 120),
+          Icon(Icons.inbox_outlined, size: 48, color: color.withValues(alpha: 0.3)),
+          const SizedBox(height: 12),
+          Center(child: Text('No tasks in "$status"', style: const TextStyle(color: Colors.white24, fontSize: 13))),
+        ],
       );
     }
     return ListView.builder(
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
       itemCount: tasks.length,
-      itemBuilder: (_, i) => _TaskCard(task: tasks[i], color: color),
+      itemBuilder: (_, i) => _TaskCard(task: tasks[i], color: color, onMove: onMove),
     );
   }
 }
 
 class _TaskCard extends StatelessWidget {
-  final Task task;
+  final dynamic task;
   final Color color;
-  const _TaskCard({required this.task, required this.color});
+  final Future<void> Function(dynamic task, String status) onMove;
+  const _TaskCard({required this.task, required this.color, required this.onMove});
 
   static const _priorityColors = {
     'High': Color(0xFFFF4444),
@@ -189,21 +191,19 @@ class _TaskCard extends StatelessWidget {
     'Low': Color(0xFF4A7BFF),
   };
 
-  static const _nextStatus = {
-    'To Do': 'In Progress',
-    'In Progress': 'Done',
-    'Done': 'To Do',
-  };
-  static const _nextLabel = {
-    'To Do': 'Start',
-    'In Progress': 'Mark Done',
-    'Done': 'Reopen',
-  };
+  static const _nextStatus = {'To Do': 'In Progress', 'In Progress': 'Done', 'Done': 'To Do'};
+  static const _nextLabel = {'To Do': 'Start', 'In Progress': 'Mark Done', 'Done': 'Reopen'};
+
+  DateTime? _date(dynamic value) => DateTime.tryParse(value?.toString() ?? '');
 
   @override
   Widget build(BuildContext context) {
-    final pc =
-        _priorityColors[task.priority] ?? const Color(0xFF4A7BFF);
+    final priority = task['priority']?.toString() ?? 'Medium';
+    final status = task['status']?.toString() ?? 'To Do';
+    final pc = _priorityColors[priority] ?? const Color(0xFF4A7BFF);
+    final due = _date(task['dueDate']);
+    final estimated = task['estimatedHours'] is num ? (task['estimatedHours'] as num).toDouble() : double.tryParse('${task['estimatedHours']}') ?? 0.0;
+
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(14),
@@ -212,79 +212,43 @@ class _TaskCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         border: Border(left: BorderSide(color: color, width: 3)),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Title
-          Text(task.title,
-              style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  decoration: task.isDone
-                      ? TextDecoration.lineThrough
-                      : null)),
-          if (task.description.isNotEmpty) ...[
-            const SizedBox(height: 4),
-            Text(task.description,
-                style: const TextStyle(
-                    color: Colors.white38, fontSize: 12),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis),
-          ],
-          const SizedBox(height: 10),
-
-          // Meta row
-          Row(children: [
-            _chip(task.priority, pc),
-            _chip('${task.estimatedHours.toStringAsFixed(1)}h',
-                Colors.white24),
-            if (task.dueDate != null)
-              _chip(
-                  '${task.dueDate!.day}/${task.dueDate!.month}/${task.dueDate!.year}',
-                  Colors.white24),
-            const Spacer(),
-            // Move button
-            GestureDetector(
-              onTap: () async {
-                final next = _nextStatus[task.status] ?? 'To Do';
-                task.status = next;
-                if (next == 'Done') {
-                  task.completedHours = task.estimatedHours;
-                } else if (next == 'To Do') {
-                  task.completedHours = 0;
-                }
-                await TaskService.instance.update(task);
-              },
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Text(_nextLabel[task.status] ?? 'Move',
-                    style: TextStyle(
-                        color: color,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600)),
-              ),
-            ),
-          ]),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(
+          task['title']?.toString() ?? 'Untitled task',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            decoration: status == 'Done' ? TextDecoration.lineThrough : null,
+          ),
+        ),
+        if ((task['description'] ?? '').toString().isNotEmpty) ...[
+          const SizedBox(height: 4),
+          Text(task['description'].toString(), style: const TextStyle(color: Colors.white38, fontSize: 12), maxLines: 2, overflow: TextOverflow.ellipsis),
         ],
-      ),
+        const SizedBox(height: 10),
+        Row(children: [
+          _chip(priority, pc),
+          _chip('${estimated.toStringAsFixed(1)}h', Colors.white38),
+          if (due != null) _chip('${due.day}/${due.month}/${due.year}', Colors.white38),
+        ]),
+        const SizedBox(height: 10),
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton(
+            style: OutlinedButton.styleFrom(side: BorderSide(color: color.withValues(alpha: 0.6)), foregroundColor: color),
+            onPressed: () => onMove(task, _nextStatus[status] ?? 'To Do'),
+            child: Text(_nextLabel[status] ?? 'Update'),
+          ),
+        ),
+      ]),
     );
   }
 
-  Widget _chip(String label, Color c) => Container(
-        margin: const EdgeInsets.only(right: 6),
-        padding:
-            const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-        decoration: BoxDecoration(
-          color: c.withValues(alpha: 0.15),
-          borderRadius: BorderRadius.circular(6),
-        ),
-        child: Text(label,
-            style: TextStyle(color: c, fontSize: 10)),
+  Widget _chip(String text, Color color) => Container(
+        margin: const EdgeInsets.only(right: 6, bottom: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(16)),
+        child: Text(text, style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w600)),
       );
 }
