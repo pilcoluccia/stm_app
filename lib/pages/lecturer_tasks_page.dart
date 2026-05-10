@@ -298,6 +298,173 @@ class _LecturerTasksPageState extends State<LecturerTasksPage> {
     }
   }
 
+  void _showEditTaskDialog(dynamic task) {
+    final titleCtrl = TextEditingController(text: task['title']?.toString() ?? '');
+    final descCtrl = TextEditingController(text: task['description']?.toString() ?? '');
+    final hoursCtrl = TextEditingController(text: (task['estimatedHours'] ?? 0).toString());
+    String priority = task['priority']?.toString() ?? 'Medium';
+    String status = task['status']?.toString() ?? 'To Do';
+    DateTime dueDate = DateTime.tryParse(task['dueDate']?.toString() ?? '') ?? DateTime.now().add(const Duration(days: 7));
+    bool saving = false;
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          backgroundColor: const Color(0xFF1A1A1A),
+          title: const Text('Edit Task', style: TextStyle(color: Colors.white, fontSize: 18)),
+          content: SingleChildScrollView(
+            child: SizedBox(
+              width: 400,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: titleCtrl,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: _dialogInput('Task Title'),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: descCtrl,
+                    style: const TextStyle(color: Colors.white),
+                    maxLines: 3,
+                    decoration: _dialogInput('Description'),
+                  ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<String>(
+                    value: priority,
+                    dropdownColor: const Color(0xFF2A2A2A),
+                    style: const TextStyle(color: Colors.white),
+                    decoration: _dialogInput('Priority'),
+                    items: ['High', 'Medium', 'Low']
+                        .map((p) => DropdownMenuItem(value: p, child: Text(p)))
+                        .toList(),
+                    onChanged: (v) => setDialogState(() => priority = v!),
+                  ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<String>(
+                    value: status,
+                    dropdownColor: const Color(0xFF2A2A2A),
+                    style: const TextStyle(color: Colors.white),
+                    decoration: _dialogInput('Status'),
+                    items: ['To Do', 'In Progress', 'Done']
+                        .map((s) => DropdownMenuItem(value: s, child: Text(s)))
+                        .toList(),
+                    onChanged: (v) => setDialogState(() => status = v!),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: hoursCtrl,
+                    style: const TextStyle(color: Colors.white),
+                    keyboardType: TextInputType.number,
+                    decoration: _dialogInput('Estimated Hours'),
+                  ),
+                  const SizedBox(height: 12),
+                  GestureDetector(
+                    onTap: () async {
+                      final picked = await showDatePicker(
+                        context: context,
+                        initialDate: dueDate,
+                        firstDate: DateTime.now().subtract(const Duration(days: 365)),
+                        lastDate: DateTime.now().add(const Duration(days: 365)),
+                        builder: (c, child) => Theme(data: ThemeData.dark(), child: child!),
+                      );
+                      if (picked != null) setDialogState(() => dueDate = picked);
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF2A2A2A),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(children: [
+                        const Icon(Icons.calendar_today, color: Colors.white70, size: 16),
+                        const SizedBox(width: 8),
+                        Text('Due: ${dueDate.day}/${dueDate.month}/${dueDate.year}', style: const TextStyle(color: Colors.white)),
+                      ]),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel', style: TextStyle(color: Colors.white70)),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF4A7BFF)),
+              onPressed: saving
+                  ? null
+                  : () async {
+                      if (titleCtrl.text.trim().isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please enter a title')));
+                        return;
+                      }
+
+                      setDialogState(() => saving = true);
+                      try {
+                        await _api.updateTask(
+                          taskId: task['id'],
+                          title: titleCtrl.text.trim(),
+                          description: descCtrl.text.trim(),
+                          priority: priority,
+                          status: status,
+                          dueDate: dueDate,
+                          estimatedHours: double.tryParse(hoursCtrl.text) ?? 0.0,
+                          completedHours: status == 'Done' ? (double.tryParse(hoursCtrl.text) ?? 0.0) : 0.0,
+                        );
+                        if (context.mounted) Navigator.pop(context);
+                        if (_selectedUnitId != null) await _loadTasks(_selectedUnitId!);
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Task updated')));
+                        }
+                      } catch (e) {
+                        setDialogState(() => saving = false);
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error updating task: $e')));
+                        }
+                      }
+                    },
+              child: saving
+                  ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  : const Text('Save Changes'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _deleteTask(String taskId) async {
+    try {
+      await _api.deleteTask(taskId);
+      if (_selectedUnitId != null) await _loadTasks(_selectedUnitId!);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Task deleted')));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error deleting task: $e')));
+      }
+    }
+  }
+
+  InputDecoration _dialogInput(String label) {
+    return InputDecoration(
+      labelText: label,
+      labelStyle: const TextStyle(color: Colors.white70),
+      filled: true,
+      fillColor: const Color(0xFF2A2A2A),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: BorderSide.none,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final selectedUnit = _selectedUnitId != null
@@ -511,15 +678,21 @@ class _LecturerTasksPageState extends State<LecturerTasksPage> {
                                               _chip(
                                                   _formatDate(task['dueDate']),
                                                   Colors.white38),
+                                            _chip(task['status'] ?? 'To Do', Colors.green),
                                             const Spacer(),
-                                            const Icon(Icons.people,
-                                                size: 14,
-                                                color: Color(0xFF4A7BFF)),
+                                            IconButton(
+                                              tooltip: 'Edit task',
+                                              icon: const Icon(Icons.edit, color: Color(0xFF4A7BFF), size: 18),
+                                              onPressed: () => _showEditTaskDialog(task),
+                                            ),
+                                            IconButton(
+                                              tooltip: 'Delete task',
+                                              icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 18),
+                                              onPressed: () => _deleteTask(task['id']),
+                                            ),
+                                            const Icon(Icons.people, size: 14, color: Color(0xFF4A7BFF)),
                                             const SizedBox(width: 4),
-                                            const Text('All students',
-                                                style: TextStyle(
-                                                    color: Color(0xFF4A7BFF),
-                                                    fontSize: 11)),
+                                            const Text('All students', style: TextStyle(color: Color(0xFF4A7BFF), fontSize: 11)),
                                           ],
                                         ),
                                       ],

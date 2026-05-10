@@ -153,7 +153,7 @@ class ApiService {
     required String unitId,
   }) async {
     final response = await http.post(
-      Uri.parse('$baseUrl/tasks'),
+      Uri.parse('$baseUrl/task'),
       headers: await _headers(),
       body: jsonEncode({
         'title': title,
@@ -209,6 +209,82 @@ class ApiService {
       return data['tasks'] ?? [];
     } else {
       throw Exception('Failed to list tasks by unit: ${response.body}');
+    }
+  }
+
+  // TANDI — GET /tasks?unitId=X&studentId=Y → filtered chores/homework
+  Future<List<dynamic>> listFilteredTasks({
+    String? unitId,
+    String? studentId,
+    String? status,
+  }) async {
+    final params = <String, String>{};
+    if (unitId != null && unitId.isNotEmpty) params['unitId'] = unitId;
+    if (studentId != null && studentId.isNotEmpty) params['studentId'] = studentId;
+    if (status != null && status.isNotEmpty) params['status'] = status;
+
+    final uri = Uri.parse('$baseUrl/tasks').replace(queryParameters: params.isEmpty ? null : params);
+    final response = await http.get(uri, headers: await _headers());
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return data['tasks'] ?? [];
+    } else {
+      throw Exception('Failed to filter tasks: ${response.body}');
+    }
+  }
+
+  // TANDI — PUT /tasks/:id → edit homework
+  Future<Map<String, dynamic>> updateTask({
+    required String taskId,
+    String? title,
+    String? description,
+    String? status,
+    String? priority,
+    DateTime? dueDate,
+    double? estimatedHours,
+    double? completedHours,
+    String? assignedToId,
+    String? unitId,
+  }) async {
+    final response = await http.put(
+      Uri.parse('$baseUrl/tasks/$taskId'),
+      headers: await _headers(),
+      body: jsonEncode({
+        if (title != null) 'title': title,
+        if (description != null) 'description': description,
+        if (status != null) 'status': status,
+        if (priority != null) 'priority': priority,
+        if (dueDate != null) 'dueDate': dueDate.toIso8601String(),
+        if (estimatedHours != null) 'estimatedHours': estimatedHours,
+        if (completedHours != null) 'completedHours': completedHours,
+        if (assignedToId != null) 'assignedToId': assignedToId,
+        if (unitId != null) 'unitId': unitId,
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Failed to update task: ${response.body}');
+    }
+  }
+
+  // TANDI — GET /progress/:studentId/:unitId → progress in hours
+  Future<Map<String, dynamic>> getTaskProgress({
+    required String studentId,
+    required String unitId,
+  }) async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/progress/$studentId/$unitId'),
+      headers: await _headers(),
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return data['progress'] ?? data;
+    } else {
+      throw Exception('Failed to get task progress: ${response.body}');
     }
   }
 
