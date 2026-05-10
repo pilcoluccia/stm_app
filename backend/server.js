@@ -117,6 +117,77 @@ function taskVisibleToStudent(task, studentId) {
   return false;
 }
 
+function normalizeTaskStatus(status) {
+  const value = (status || 'To Do').toString().replace(/\s+/g, '').toLowerCase();
+  if (value === 'done' || value === 'completed') return 'Done';
+  if (value === 'inprogress' || value === 'progress') return 'In Progress';
+  return 'To Do';
+}
+
+function statusMatches(taskStatus, requestedStatus) {
+  if (!requestedStatus) return true;
+  return normalizeTaskStatus(taskStatus) === normalizeTaskStatus(requestedStatus);
+}
+
+function getTaskById(taskId) {
+  return tasks.find((item) => item.id === taskId);
+}
+
+function taskMatchesFilters(task, filters = {}) {
+  const { unitId, studentId, status } = filters;
+  if (unitId) {
+    const unit = findUnit(unitId);
+    const resolvedUnitId = unit ? unit.id : unitId;
+    if (task.unitId !== resolvedUnitId) return false;
+  }
+  if (studentId && !taskVisibleToStudent(task, studentId)) return false;
+  if (!statusMatches(task.status, status)) return false;
+  return true;
+}
+
+function calculateProgress(studentId, unitId) {
+  const unit = unitId ? findUnit(unitId) : null;
+  const resolvedUnitId = unit ? unit.id : unitId;
+
+  const filteredTasks = tasks.filter((task) =>
+    taskMatchesFilters(task, {
+      unitId: resolvedUnitId,
+      studentId
+    })
+  );
+
+  const totalHours = filteredTasks.reduce(
+    (sum, task) => sum + (Number(task.estimatedHours) || 0),
+    0
+  );
+
+  const completedHours = filteredTasks.reduce((sum, task) => {
+    if (normalizeTaskStatus(task.status) !== 'Done') return sum;
+    return sum + (Number(task.completedHours) || Number(task.estimatedHours) || 0);
+  }, 0);
+
+  const inProgressHours = filteredTasks.reduce((sum, task) => {
+    if (normalizeTaskStatus(task.status) !== 'In Progress') return sum;
+    return sum + (Number(task.completedHours) || 0);
+  }, 0);
+
+  const progressPercent = totalHours > 0 ? Math.round((completedHours / totalHours) * 100) : 0;
+
+  return {
+    studentId,
+    unitId: resolvedUnitId || '',
+    totalTasks: filteredTasks.length,
+    todoTasks: filteredTasks.filter((task) => normalizeTaskStatus(task.status) === 'To Do').length,
+    inProgressTasks: filteredTasks.filter((task) => normalizeTaskStatus(task.status) === 'In Progress').length,
+    doneTasks: filteredTasks.filter((task) => normalizeTaskStatus(task.status) === 'Done').length,
+    totalHours,
+    completedHours,
+    inProgressHours,
+    remainingHours: Math.max(totalHours - completedHours, 0),
+    progressPercent
+  };
+}
+
 app.get('/', (req, res) => {
   res.json({ message: 'STM backend is running', api: '/api' });
 });
@@ -313,7 +384,7 @@ app.get('/api/enrollments/unit/:unitId', (req, res) => {
   res.json({ enrollments: unitEnrollments });
 });
 
-app.post('/api/tasks', (req, res) => {
+function createTaskFromRequest(req, res) {
   const unit = req.body.unitId ? findUnit(req.body.unitId) : null;
   const assignedToIds = [];
 
@@ -328,11 +399,14 @@ app.post('/api/tasks', (req, res) => {
   const task = {
     id: nextId('task'),
     ...req.body,
+    status: normalizeTaskStatus(req.body.status),
+    completedHours: Number(req.body.completedHours) || 0,
     unitId: unit ? unit.id : (req.body.unitId || ''),
     unitCode: unit ? unit.code : req.body.unitCode,
     unitName: unit ? unit.name : req.body.unitName,
     assignedToIds,
-    createdAt: new Date().toISOString()
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   };
 
   tasks.push(task);
@@ -350,7 +424,42 @@ app.post('/api/tasks', (req, res) => {
     });
   });
 
-  res.status(200).json({ task });
+  return res.status(200).json({ task });
+}
+
+// TANDI — Tasks & Progress Service
+// GET /api/tasks?unitId=X&studentId=Y → filtered chores/homework
+app.get('/api/tasks', (req, res) => {
+  const { unitId, studentId, status } = req.query;
+  const filteredTasks = tasks.filter((task) => taskMatchesFilters(task, { unitId, studentId, status }));
+  res.json({ tasks: filteredTasks });
+});
+
+// POST /api/task → create homework
+app.post('/api/task', (req, res) => createTaskFromRequest(req, res));
+
+// Existing plural route kept for backwards compatibility with the Flutter screens
+app.post('/api/tasks', (req, res) => createTaskFromRequest(req, res));
+
+// PUT /api/tasks/:id → edit homework
+app.put('/api/tasks/:taskId', (req, res) => {
+  const task = getTaskById(req.params.taskId);
+  if (!task) return notFound(res, 'Task not found');
+
+  const unit = req.body.unitId ? findUnit(req.body.unitId) : null;
+  Object.assign(task, {
+    ...req.body,
+    status: req.body.status ? normalizeTaskStatus(req.body.status) : task.status,
+    unitId: unit ? unit.id : (req.body.unitId !== undefined ? req.body.unitId : task.unitId),
+    unitCode: unit ? unit.code : (req.body.unitCode !== undefined ? req.body.unitCode : task.unitCode),
+    unitName: unit ? unit.name : (req.body.unitName !== undefined ? req.body.unitName : task.unitName),
+    updatedAt: new Date().toISOString()
+  });
+
+  if (req.body.estimatedHours !== undefined) task.estimatedHours = Number(req.body.estimatedHours) || 0;
+  if (req.body.completedHours !== undefined) task.completedHours = Number(req.body.completedHours) || 0;
+
+  res.json({ task });
 });
 
 app.get('/api/tasks/user/:userId', (req, res) => {
@@ -368,11 +477,24 @@ app.get('/api/tasks/unit/:unitId', (req, res) => {
 });
 
 app.put('/api/tasks/:taskId/status', (req, res) => {
-  const task = tasks.find((item) => item.id === req.params.taskId);
+  const task = getTaskById(req.params.taskId);
   if (!task) return notFound(res, 'Task not found');
-  task.status = req.body.status || task.status;
-  if (req.body.completedHours !== undefined) task.completedHours = req.body.completedHours;
+  task.status = normalizeTaskStatus(req.body.status || task.status);
+  if (req.body.completedHours !== undefined) task.completedHours = Number(req.body.completedHours) || 0;
+  if (task.status === 'Done' && req.body.completedHours === undefined) {
+    task.completedHours = Number(task.estimatedHours) || 0;
+  }
+  if (task.status !== 'Done' && req.body.completedHours === undefined) {
+    task.completedHours = 0;
+  }
+  task.updatedAt = new Date().toISOString();
   res.json({ task });
+});
+
+// GET /api/progress/:studentId/:unitId → progress in hours
+app.get('/api/progress/:studentId/:unitId', (req, res) => {
+  const progress = calculateProgress(req.params.studentId, req.params.unitId);
+  res.json({ progress });
 });
 
 app.delete('/api/tasks/:taskId', (req, res) => {
