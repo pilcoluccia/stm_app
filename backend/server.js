@@ -607,6 +607,7 @@ app.get('/api/groups/:id/members', (req, res) => {
 
   res.json(group.members);
 });
+
 // CREATE group
 app.post('/api/groups', (req, res) => {
   const newGroup = {
@@ -620,6 +621,7 @@ app.post('/api/groups', (req, res) => {
 
   res.status(201).json(newGroup);
 });
+
 // JOIN group
 app.post('/api/groups/:id/join', (req, res) => {
   const group = groups.find(
@@ -642,28 +644,7 @@ app.post('/api/groups/:id/join', (req, res) => {
 
   res.json(group);
 });
-// JOIN group
-app.post('/api/groups/:id/join', (req, res) => {
-  const group = groups.find(
-    g => g.id == req.params.id
-  );
 
-  if (!group) {
-    return res.status(404).json({
-      error: 'Group not found'
-    });
-  }
-
-  const newMember = {
-    uid: req.body.uid,
-    name: req.body.name,
-    role: 'member'
-  };
-
-  group.members.push(newMember);
-
-  res.json(group);
-});
 // UPDATE member role
 app.put('/api/groups/:id/members/:uid/role', (req, res) => {
   const group = groups.find(
@@ -690,6 +671,7 @@ app.put('/api/groups/:id/members/:uid/role', (req, res) => {
 
   res.json(member);
 });
+
 app.use((req, res) => {
   res.status(404).json({
     error: `Route not found: ${req.method} ${req.originalUrl}`
