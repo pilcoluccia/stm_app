@@ -558,9 +558,142 @@ app.get('/api/study-sessions/stats/:userId', (req, res) => {
     totalMinutes: Math.round(totalSeconds / 60)
   });
 });
+let groups = [
+  {
+    id: 1,
+    unitId: "ICT205",
+    name: "Flutter Masters",
+    members: [
+      {
+        uid: 1,
+        name: "Yamsel",
+        role: "leader"
+      }
+    ]
+  }
+];
 
+// GET all groups
+app.get('/api/groups', (req, res) => {
+  res.json(groups);
+});
+
+// GET single group
+app.get('/api/groups/:id', (req, res) => {
+  const group = groups.find(
+    g => g.id == req.params.id
+  );
+
+  if (!group) {
+    return res.status(404).json({
+      error: 'Group not found'
+    });
+  }
+
+  res.json(group);
+});
+
+// GET group members
+app.get('/api/groups/:id/members', (req, res) => {
+  const group = groups.find(
+    g => g.id == req.params.id
+  );
+
+  if (!group) {
+    return res.status(404).json({
+      error: 'Group not found'
+    });
+  }
+
+  res.json(group.members);
+});
+// CREATE group
+app.post('/api/groups', (req, res) => {
+  const newGroup = {
+    id: groups.length + 1,
+    unitId: req.body.unitId,
+    name: req.body.name,
+    members: req.body.members || []
+  };
+
+  groups.push(newGroup);
+
+  res.status(201).json(newGroup);
+});
+// JOIN group
+app.post('/api/groups/:id/join', (req, res) => {
+  const group = groups.find(
+    g => g.id == req.params.id
+  );
+
+  if (!group) {
+    return res.status(404).json({
+      error: 'Group not found'
+    });
+  }
+
+  const newMember = {
+    uid: req.body.uid,
+    name: req.body.name,
+    role: 'member'
+  };
+
+  group.members.push(newMember);
+
+  res.json(group);
+});
+// JOIN group
+app.post('/api/groups/:id/join', (req, res) => {
+  const group = groups.find(
+    g => g.id == req.params.id
+  );
+
+  if (!group) {
+    return res.status(404).json({
+      error: 'Group not found'
+    });
+  }
+
+  const newMember = {
+    uid: req.body.uid,
+    name: req.body.name,
+    role: 'member'
+  };
+
+  group.members.push(newMember);
+
+  res.json(group);
+});
+// UPDATE member role
+app.put('/api/groups/:id/members/:uid/role', (req, res) => {
+  const group = groups.find(
+    g => g.id == req.params.id
+  );
+
+  if (!group) {
+    return res.status(404).json({
+      error: 'Group not found'
+    });
+  }
+
+  const member = group.members.find(
+    m => m.uid == req.params.uid
+  );
+
+  if (!member) {
+    return res.status(404).json({
+      error: 'Member not found'
+    });
+  }
+
+  member.role = req.body.role;
+
+  res.json(member);
+});
 app.use((req, res) => {
-  res.status(404).json({ error: `Route not found: ${req.method} ${req.originalUrl}` });
+  res.status(404).json({
+    error: `Route not found: ${req.method} ${req.originalUrl}`
+  });
 });
 
 app.listen(PORT, () => {
