@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/unit_model.dart';
 import '../services/api_service.dart';
+import '../services/auth_service.dart';
 
 class TaskBoardPage extends StatefulWidget {
   final UnitModel unit;
@@ -36,7 +37,8 @@ class _TaskBoardPageState extends State<TaskBoardPage> {
   Future<void> _loadTasks() async {
     setState(() => _loading = true);
     try {
-      final tasks = await _api.listTasksByUnit(widget.unit.id);
+      final uid = AuthService.instance.currentAppUser?.dbId;
+      final tasks = await _api.listTasksByUnit(widget.unit.id, studentId: uid);
       if (mounted) {
         setState(() {
           _tasks = tasks;
