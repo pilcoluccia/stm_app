@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
 import '../services/auth_service.dart';
+import 'lecturer_task_detail_page.dart';
 
 class LecturerTasksPage extends StatefulWidget {
   const LecturerTasksPage({super.key});
