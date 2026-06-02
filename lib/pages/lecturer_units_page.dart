@@ -173,7 +173,7 @@ class _LecturerUnitsPageState extends State<LecturerUnitsPage> {
                     TextField(controller: descCtrl, style: const TextStyle(color: Colors.white), maxLines: 3, decoration: _dialogInput('Description')),
                     const SizedBox(height: 12),
                     DropdownButtonFormField<String>(
-                      initialValue: priority,
+                      value: priority,
                       dropdownColor: const Color(0xFF2A2A2A),
                       style: const TextStyle(color: Colors.white),
                       decoration: _dialogInput('Priority'),
@@ -182,7 +182,7 @@ class _LecturerUnitsPageState extends State<LecturerUnitsPage> {
                     ),
                     const SizedBox(height: 12),
                     DropdownButtonFormField<String>(
-                      initialValue: taskType,
+                      value: taskType,
                       dropdownColor: const Color(0xFF2A2A2A),
                       style: const TextStyle(color: Colors.white),
                       decoration: _dialogInput('Task Type'),
