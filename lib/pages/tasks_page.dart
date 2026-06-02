@@ -54,7 +54,7 @@ class _TasksPageState extends State<TasksPage> {
       // Load tasks from each enrolled unit
       for (final unit in units) {
         if (unit['id'] != null) {
-          final unitTasks = await _api.listTasksByUnit(unit['id']);
+          final unitTasks = await _api.listTasksByUnit(unit['id'], studentId: uid);
           for (final task in unitTasks) {
             // Only add if not already in the list (avoid duplicates)
             if (task['id'] != null && !seenTaskIds.contains(task['id'])) {

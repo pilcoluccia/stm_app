@@ -18,7 +18,6 @@ class _LoginPageState extends State<LoginPage> {
   final _emailCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
 
-  String _role = 'Student';
   bool _loading = false;
   bool _loadingGoogle = false;
   bool _obscure = true;
@@ -124,34 +123,13 @@ class _LoginPageState extends State<LoginPage> {
                 fontWeight: FontWeight.bold,
               ),
             ),
-            const SizedBox(height: 40),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 18),
-              decoration: BoxDecoration(
-                color: const Color(0xFF0F0F0F),
-                borderRadius: BorderRadius.circular(28),
-                border: Border.all(color: const Color(0xFF3A3A3A)),
-              ),
-              child: DropdownButton<String>(
-                value: _role,
-                isExpanded: true,
-                underline: const SizedBox(),
-                style: const TextStyle(color: Colors.white, fontSize: 16),
-                dropdownColor: const Color(0xFF1A1A1A),
-                items: const [
-                  DropdownMenuItem(
-                    value: 'Student',
-                    child: Text('Student'),
-                  ),
-                  DropdownMenuItem(
-                    value: 'Lecturer',
-                    child: Text('Lecturer'),
-                  ),
-                ],
-                onChanged: (v) => setState(() => _role = v!),
-              ),
+            const SizedBox(height: 10),
+            const Text(
+              'Sign in with your account. The app will automatically open the correct Student, Lecturer, or Admin interface.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.white54, fontSize: 13, height: 1.4),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 34),
             TextField(
               controller: _emailCtrl,
               keyboardType: TextInputType.emailAddress,

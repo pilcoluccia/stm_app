@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import '../models/unit_model.dart';
 import '../services/api_service.dart';
+import '../services/auth_service.dart';
 import '../services/groups_service.dart';
 import 'group_page.dart';
 import 'task_board_page.dart';
+import 'task_group_chat_page.dart';
 
 class SubjectDetailPage extends StatefulWidget {
   final UnitModel unit;
@@ -27,7 +29,9 @@ class _SubjectDetailPageState extends State<SubjectDetailPage> {
   Future<void> _loadTasks() async {
     setState(() => _loading = true);
     try {
-      final tasks = await _api.listTasksByUnit(widget.unit.id);
+      final currentUser = AuthService.instance.currentAppUser;
+      final studentId = currentUser?.dbId ?? currentUser?.uid ?? currentUser?.email ?? '';
+      final tasks = await _api.listTasksByUnit(widget.unit.id, studentId: studentId);
       tasks.sort((a, b) {
         final dateA = DateTime.tryParse((a['dueDate'] ?? '').toString());
         final dateB = DateTime.tryParse((b['dueDate'] ?? '').toString());
@@ -186,24 +190,38 @@ class _SubjectDetailPageState extends State<SubjectDetailPage> {
                 const _EmptyHint(text: 'No group assigned yet.')
               else
                 GestureDetector(
-                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => GroupPage(group: group))),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => GroupPage(group: group)),
+                  ),
                   child: Container(
                     padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(color: const Color(0xFF1A1A1A), borderRadius: BorderRadius.circular(14)),
-                    child: Row(children: [
-                      const Icon(Icons.group, color: Color(0xFF4A7BFF)),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(group.name, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
-                            Text('${group.members.length} members', style: const TextStyle(color: Colors.white38, fontSize: 12)),
-                          ],
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF1A1A1A),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.group, color: Color(0xFF4A7BFF)),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                group.name,
+                                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                              ),
+                              Text(
+                                '${group.members.length} members',
+                                style: const TextStyle(color: Colors.white38, fontSize: 12),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                      const Icon(Icons.chevron_right, color: Colors.white38),
-                    ]),
+                        const Icon(Icons.chevron_right, color: Colors.white38),
+                      ],
+                    ),
                   ),
                 ),
             ],
@@ -247,29 +265,111 @@ class _TaskRow extends StatelessWidget {
 
   DateTime? _date(dynamic value) => DateTime.tryParse(value?.toString() ?? '');
 
+  bool _studentMatches(dynamic student, AuthService auth) {
+    final current = auth.currentAppUser;
+    if (current == null || student is! Map) return false;
+    final values = [
+      student['id'],
+      student['uid'],
+      student['studentId'],
+      student['email'],
+      student['name'],
+    ].map((e) => e?.toString().toLowerCase()).whereType<String>().toSet();
+    return values.contains(current.dbId.toLowerCase()) ||
+        values.contains(current.uid.toLowerCase()) ||
+        values.contains(current.email.toLowerCase()) ||
+        values.contains(current.name.toLowerCase());
+  }
+
+  Map<String, dynamic>? _myGroup(List groups) {
+    final auth = AuthService.instance;
+    for (final group in groups) {
+      if (group is! Map) continue;
+      final students = (group['students'] as List?) ?? [];
+      if (students.any((student) => _studentMatches(student, auth))) {
+        return Map<String, dynamic>.from(group);
+      }
+    }
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
     final due = _date(task['dueDate']);
+    final type = (task['taskType'] ?? 'Individual').toString();
+    final groups = (task['groups'] ?? []) as List;
+    final group = _myGroup(groups);
+
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(color: const Color(0xFF1A1A1A), borderRadius: BorderRadius.circular(12)),
-      child: Row(children: [
-        Icon(
-          task['status'] == 'Done' ? Icons.check_circle : Icons.radio_button_unchecked,
-          color: task['status'] == 'Done' ? const Color(0xFF4CAF50) : Colors.white38,
-          size: 18,
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(task['title']?.toString() ?? 'Untitled task', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
-            if (due != null)
-              Text('Due ${due.day}/${due.month}/${due.year}', style: const TextStyle(color: Colors.white38, fontSize: 12)),
-          ]),
-        ),
-        Text(task['priority']?.toString() ?? 'Medium', style: const TextStyle(color: Color(0xFF4A7BFF), fontSize: 12)),
-      ]),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1A1A1A),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                task['status'] == 'Done' ? Icons.check_circle : Icons.radio_button_unchecked,
+                color: task['status'] == 'Done' ? const Color(0xFF4CAF50) : Colors.white38,
+                size: 18,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      task['title']?.toString() ?? 'Untitled task',
+                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                    ),
+                    if (due != null)
+                      Text(
+                        'Due ${due.day}/${due.month}/${due.year}',
+                        style: const TextStyle(color: Colors.white38, fontSize: 12),
+                      ),
+                  ],
+                ),
+              ),
+              Text(
+                type == 'Group' ? 'Group' : (task['priority']?.toString() ?? 'Medium'),
+                style: TextStyle(color: type == 'Group' ? Colors.purpleAccent : const Color(0xFF4A7BFF), fontSize: 12),
+              ),
+            ],
+          ),
+          if (type == 'Group') ...[
+            const SizedBox(height: 10),
+            if (group == null)
+              const Text(
+                'This is a group task, but you have not been assigned to a group yet.',
+                style: TextStyle(color: Colors.orangeAccent, fontSize: 12),
+              )
+            else ...[
+              Text(
+                'Your Group: ${group['name'] ?? 'Group'}',
+                style: const TextStyle(color: Color(0xFF4A7BFF), fontSize: 12, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Members: ${((group['students'] ?? []) as List).map((s) => (s['name'] ?? s['email'] ?? s['id']).toString()).join(', ')}',
+                style: const TextStyle(color: Colors.white70, fontSize: 12),
+              ),
+              const SizedBox(height: 8),
+              OutlinedButton.icon(
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => TaskGroupChatPage(group: group, task: Map<String, dynamic>.from(task))),
+                ),
+                icon: const Icon(Icons.chat_bubble_outline, size: 16),
+                label: const Text('Open Group Chat'),
+              ),
+            ],
+          ],
+        ],
+      ),
     );
   }
 }

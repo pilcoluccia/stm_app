@@ -27,6 +27,7 @@ class _LecturerDashboardPageState extends State<LecturerDashboardPage> {
   final _api = ApiService();
   List<_UnitWithEnrollments> _units = [];
   List<dynamic> _allTasks = [];
+  List<dynamic> _notifications = [];
   bool _loading = true;
 
   static const _statusColors = {
@@ -44,7 +45,9 @@ class _LecturerDashboardPageState extends State<LecturerDashboardPage> {
   Future<void> _loadData() async {
     setState(() => _loading = true);
     try {
-      final lecturerId = AuthService.instance.currentAppUser!.dbId;
+      final appUser = AuthService.instance.currentAppUser!;
+      final lecturerId = appUser.dbId;
+      final notifications = await _api.listNotifications(appUser.dbId);
       final units = await _api.listAllUnits(lecturerId: lecturerId);
 
       // Load all tasks for this lecturer's units
@@ -78,6 +81,7 @@ class _LecturerDashboardPageState extends State<LecturerDashboardPage> {
       setState(() {
         _units = unitsWithEnrollments;
         _allTasks = allTasks;
+        _notifications = notifications;
         _loading = false;
       });
     } catch (e) {
@@ -164,6 +168,8 @@ class _LecturerDashboardPageState extends State<LecturerDashboardPage> {
                       icon: Icons.task_outlined,
                       color: const Color(0xFFFFAA00)),
                 ]),
+                const SizedBox(height: 20),
+                _NotificationsPanel(notifications: _notifications.take(3).toList()),
                 const SizedBox(height: 20),
 
                 // ── Overall progress ─────────────────────
@@ -419,3 +425,115 @@ Widget _statusPill(String label, int count, Color color) => Expanded(
         ]),
       ),
     );
+
+class _NotificationsPanel extends StatelessWidget {
+  final List<dynamic> notifications;
+
+  const _NotificationsPanel({
+    required this.notifications,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (notifications.isEmpty) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: const Color(0xFF1A1A1A),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: const Color(0xFF2A2A2A)),
+        ),
+        child: const Text(
+          'No notifications yet.',
+          style: TextStyle(
+            color: Colors.white54,
+            fontSize: 13,
+          ),
+        ),
+      );
+    }
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1A1A1A),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFF2A2A2A)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(
+                Icons.notifications_active_outlined,
+                color: Color(0xFF4A7BFF),
+                size: 18,
+              ),
+              SizedBox(width: 8),
+              Text(
+                'Notifications',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 17,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          ...notifications.map((notification) {
+            final title = notification['title']?.toString() ?? 'Notification';
+            final message = notification['message']?.toString() ?? '';
+            final createdAt = notification['createdAt']?.toString() ?? '';
+
+            return Container(
+              margin: const EdgeInsets.only(bottom: 10),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFF111111),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFF2A2A2A)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  if (message.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      message,
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
+                  if (createdAt.isNotEmpty) ...[
+                    const SizedBox(height: 6),
+                    Text(
+                      createdAt,
+                      style: const TextStyle(
+                        color: Colors.white30,
+                        fontSize: 11,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+}
+

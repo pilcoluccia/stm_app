@@ -2,7 +2,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import 'home_page.dart';
-import 'lecturer_page.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -67,8 +66,7 @@ class _RegisterPageState extends State<RegisterPage> {
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
-        builder: (_) =>
-            role == UserRole.lecturer ? const LecturerPage() : const HomePage(),
+        builder: (_) => const HomePage(),
       ),
     );
   }

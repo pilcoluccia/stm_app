@@ -136,7 +136,7 @@ class _LecturerTasksPageState extends State<LecturerTasksPage> {
 
                   // Priority
                   DropdownButtonFormField<String>(
-                    initialValue: priority,
+                    value: priority,
                     dropdownColor: const Color(0xFF2A2A2A),
                     style: const TextStyle(color: Colors.white),
                     decoration: InputDecoration(
@@ -334,7 +334,7 @@ class _LecturerTasksPageState extends State<LecturerTasksPage> {
                   ),
                   const SizedBox(height: 12),
                   DropdownButtonFormField<String>(
-                    initialValue: priority,
+                    value: priority,
                     dropdownColor: const Color(0xFF2A2A2A),
                     style: const TextStyle(color: Colors.white),
                     decoration: _dialogInput('Priority'),
@@ -345,7 +345,7 @@ class _LecturerTasksPageState extends State<LecturerTasksPage> {
                   ),
                   const SizedBox(height: 12),
                   DropdownButtonFormField<String>(
-                    initialValue: status,
+                    value: status,
                     dropdownColor: const Color(0xFF2A2A2A),
                     style: const TextStyle(color: Colors.white),
                     decoration: _dialogInput('Status'),
@@ -637,76 +637,75 @@ class _LecturerTasksPageState extends State<LecturerTasksPage> {
                                         MaterialPageRoute(
                                           builder: (_) => LecturerTaskDetailPage(task: Map<String, dynamic>.from(task)),
                                         ),
-                                      );
+                                      ));
                                     },
                                     child: Container(
-                                      margin: const EdgeInsets.only(bottom: 10),
-                                      padding: const EdgeInsets.all(14),
-                                      decoration: BoxDecoration(
-                                        color: const Color(0xFF1A1A1A),
-                                        borderRadius: BorderRadius.circular(12),
-                                        border: Border(
-                                            left: BorderSide(
-                                                color: _priorityColor(
-                                                    task['priority']),
-                                                width: 3)),
-                                      ),
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Row(
-                                            children: [
-                                              Expanded(
-                                                child: Text(task['title'] ?? '',
-                                                    style: const TextStyle(
-                                                        color: Colors.white,
-                                                        fontSize: 15,
-                                                        fontWeight:
-                                                            FontWeight.w600)),
-                                              ),
-                                              _chip(task['priority'] ?? 'Medium',
-                                                  _priorityColor(
-                                                      task['priority'])),
-                                            ],
-                                          ),
-                                          if (task['description'] != null &&
-                                              task['description'].isNotEmpty) ...[
-                                            const SizedBox(height: 6),
-                                            Text(task['description'],
-                                                style: const TextStyle(
-                                                    color: Colors.white70,
-                                                    fontSize: 13)),
+                                    margin: const EdgeInsets.only(bottom: 10),
+                                    padding: const EdgeInsets.all(14),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF1A1A1A),
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border(
+                                          left: BorderSide(
+                                              color: _priorityColor(
+                                                  task['priority']),
+                                              width: 3)),
+                                    ),
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          children: [
+                                            Expanded(
+                                              child: Text(task['title'] ?? '',
+                                                  style: const TextStyle(
+                                                      color: Colors.white,
+                                                      fontSize: 15,
+                                                      fontWeight:
+                                                          FontWeight.w600)),
+                                            ),
+                                            _chip(task['priority'] ?? 'Medium',
+                                                _priorityColor(
+                                                    task['priority'])),
                                           ],
-                                          const SizedBox(height: 8),
-                                          Row(
-                                            children: [
-                                              _chip(
-                                                  '${(task['estimatedHours'] ?? 0).toStringAsFixed(1)}h',
-                                                  Colors.white38),
-                                              if (task['dueDate'] != null)
-                                                _chip(
-                                                    _formatDate(task['dueDate']),
-                                                    Colors.white38),
-                                              _chip(task['status'] ?? 'To Do', Colors.green),
-                                              const Spacer(),
-                                              IconButton(
-                                                tooltip: 'Edit task',
-                                                icon: const Icon(Icons.edit, color: Color(0xFF4A7BFF), size: 18),
-                                                onPressed: () => _showEditTaskDialog(task),
-                                              ),
-                                              IconButton(
-                                                tooltip: 'Delete task',
-                                                icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 18),
-                                                onPressed: () => _deleteTask(task['id']),
-                                              ),
-                                              const Icon(Icons.people, size: 14, color: Color(0xFF4A7BFF)),
-                                              const SizedBox(width: 4),
-                                              const Text('All students', style: TextStyle(color: Color(0xFF4A7BFF), fontSize: 11)),
-                                            ],
-                                          ),
+                                        ),
+                                        if (task['description'] != null &&
+                                            task['description'].isNotEmpty) ...[
+                                          const SizedBox(height: 6),
+                                          Text(task['description'],
+                                              style: const TextStyle(
+                                                  color: Colors.white70,
+                                                  fontSize: 13)),
                                         ],
-                                      ),
+                                        const SizedBox(height: 8),
+                                        Row(
+                                          children: [
+                                            _chip(
+                                                '${(task['estimatedHours'] ?? 0).toStringAsFixed(1)}h',
+                                                Colors.white38),
+                                            if (task['dueDate'] != null)
+                                              _chip(
+                                                  _formatDate(task['dueDate']),
+                                                  Colors.white38),
+                                            _chip(task['status'] ?? 'To Do', Colors.green),
+                                            const Spacer(),
+                                            IconButton(
+                                              tooltip: 'Edit task',
+                                              icon: const Icon(Icons.edit, color: Color(0xFF4A7BFF), size: 18),
+                                              onPressed: () => _showEditTaskDialog(task),
+                                            ),
+                                            IconButton(
+                                              tooltip: 'Delete task',
+                                              icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 18),
+                                              onPressed: () => _deleteTask(task['id']),
+                                            ),
+                                            const Icon(Icons.people, size: 14, color: Color(0xFF4A7BFF)),
+                                            const SizedBox(width: 4),
+                                            const Text('All students', style: TextStyle(color: Color(0xFF4A7BFF), fontSize: 11)),
+                                          ],
+                                        ),
+                                      ],
                                     ),
                                   );
                                 },

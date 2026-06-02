@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/api_service.dart';
+import '../services/auth_service.dart';
 import 'tasks_page.dart';
 import 'units_page.dart';
 
@@ -15,6 +16,7 @@ class _DashboardPageState extends State<DashboardPage> {
   final _api = ApiService();
   List<dynamic> _tasks = [];
   List<dynamic> _units = [];
+  List<dynamic> _notifications = [];
   bool _loading = true;
 
   @override
@@ -29,6 +31,9 @@ class _DashboardPageState extends State<DashboardPage> {
       final uid = FirebaseAuth.instance.currentUser?.uid;
       if (uid == null) return;
 
+      final appUser = AuthService.instance.currentAppUser;
+      final notificationId = appUser?.dbId ?? appUser?.email ?? uid;
+      final notifications = await _api.listNotifications(notificationId);
       final enrollments = await _api.listStudentEnrollments(uid);
       final units = enrollments.map((e) => e['unit']).where((u) => u != null).toList();
       final personalTasks = await _api.listTasksByUser(uid);
@@ -41,7 +46,7 @@ class _DashboardPageState extends State<DashboardPage> {
 
       for (final unit in units) {
         if (unit['id'] != null) {
-          final unitTasks = await _api.listTasksByUnit(unit['id'].toString());
+          final unitTasks = await _api.listTasksByUnit(unit['id'].toString(), studentId: uid);
           for (final task in unitTasks) {
             final id = task['id']?.toString();
             if (id != null && !seenTaskIds.contains(id)) {
@@ -65,6 +70,7 @@ class _DashboardPageState extends State<DashboardPage> {
         setState(() {
           _tasks = allTasks;
           _units = units;
+          _notifications = notifications;
           _loading = false;
         });
       }
@@ -147,10 +153,12 @@ class _DashboardPageState extends State<DashboardPage> {
                       padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(color: const Color(0xFF1A1A1A), borderRadius: BorderRadius.circular(16)),
                       child: const Text(
-                        'New lecturer units appear in All Units. After you enrol, lecturer tasks for that unit appear here, in Tasks, Calendar, and Subject Details.',
+                        'Units and lecturer tasks appear here after an Admin enrols you into a unit.',
                         style: TextStyle(color: Colors.white70, fontSize: 14),
                       ),
                     ),
+                    const SizedBox(height: 20),
+                    _NotificationsPanel(notifications: _notifications.take(3).toList()),
                     const SizedBox(height: 20),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -164,7 +172,7 @@ class _DashboardPageState extends State<DashboardPage> {
                     ),
                     const SizedBox(height: 8),
                     if (_units.isEmpty)
-                      const _EmptyBox(text: 'No enrolled units yet. Open Units and enrol in available units.')
+                      const _EmptyBox(text: 'No enrolled units yet. Please contact an Admin to be enrolled into a unit.')
                     else
                       ..._units.take(3).map((unit) => _UnitCard(unit: unit)),
                     const SizedBox(height: 20),
@@ -288,3 +296,115 @@ class _EmptyBox extends StatelessWidget {
         child: Text(text, style: const TextStyle(color: Colors.white38, fontSize: 13)),
       );
 }
+
+class _NotificationsPanel extends StatelessWidget {
+  final List<dynamic> notifications;
+
+  const _NotificationsPanel({
+    required this.notifications,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (notifications.isEmpty) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: const Color(0xFF1A1A1A),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: const Color(0xFF2A2A2A)),
+        ),
+        child: const Text(
+          'No notifications yet.',
+          style: TextStyle(
+            color: Colors.white54,
+            fontSize: 13,
+          ),
+        ),
+      );
+    }
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1A1A1A),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFF2A2A2A)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(
+                Icons.notifications_active_outlined,
+                color: Color(0xFF4A7BFF),
+                size: 18,
+              ),
+              SizedBox(width: 8),
+              Text(
+                'Notifications',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 17,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          ...notifications.map((notification) {
+            final title = notification['title']?.toString() ?? 'Notification';
+            final message = notification['message']?.toString() ?? '';
+            final createdAt = notification['createdAt']?.toString() ?? '';
+
+            return Container(
+              margin: const EdgeInsets.only(bottom: 10),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFF111111),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFF2A2A2A)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  if (message.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      message,
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
+                  if (createdAt.isNotEmpty) ...[
+                    const SizedBox(height: 6),
+                    Text(
+                      createdAt,
+                      style: const TextStyle(
+                        color: Colors.white30,
+                        fontSize: 11,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+}
+
