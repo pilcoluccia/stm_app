@@ -151,6 +151,10 @@ class ApiService {
     required double estimatedHours,
     required String assignedToId,
     required String unitId,
+    String taskType = 'Individual',
+    List<String> groupMembers = const [],
+    List<String> assignedStudentIds = const [],
+    List<Map<String, dynamic>> groups = const [],
   }) async {
     final response = await http.post(
       Uri.parse('$baseUrl/task'),
@@ -164,6 +168,10 @@ class ApiService {
         'estimatedHours': estimatedHours,
         'assignedToId': assignedToId,
         'unitId': unitId,
+        'taskType': taskType,
+        'groupMembers': groupMembers,
+        'assignedStudentIds': assignedStudentIds,
+        'groups': groups,
       }),
     );
 
@@ -603,3 +611,7 @@ class ApiService {
     }
   }
 }
+
+
+
+
