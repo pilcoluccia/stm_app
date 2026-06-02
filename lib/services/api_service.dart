@@ -4,7 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 
 class ApiService {
   // URL del backend (cambiar según ambiente)
-  static const String baseUrl = 'http://localhost:5000/api';
+  static const String baseUrl = 'http://10.0.2.2:5000/api';
 
   // Singleton
   static final ApiService _instance = ApiService._internal();
@@ -201,10 +201,18 @@ class ApiService {
     }
   }
 
-  Future<List<dynamic>> listTasksByUnit(String unitId, {String? assignedToId}) async {
+  Future<List<dynamic>> listTasksByUnit(String unitId,
+      {String? assignedToId, String? studentId}) async {
     var url = '$baseUrl/tasks/unit/$unitId';
-    if (assignedToId != null) {
-      url += '?assignedToId=$assignedToId';
+    final params = <String, String>{};
+    if (assignedToId != null && assignedToId.isNotEmpty) {
+      params['assignedToId'] = assignedToId;
+    }
+    if (studentId != null && studentId.isNotEmpty) {
+      params['studentId'] = studentId;
+    }
+    if (params.isNotEmpty) {
+      url += '?${Uri(queryParameters: params).query}';
     }
 
     final response = await http.get(
@@ -228,10 +236,13 @@ class ApiService {
   }) async {
     final params = <String, String>{};
     if (unitId != null && unitId.isNotEmpty) params['unitId'] = unitId;
-    if (studentId != null && studentId.isNotEmpty) params['studentId'] = studentId;
+    if (studentId != null && studentId.isNotEmpty) {
+      params['studentId'] = studentId;
+    }
     if (status != null && status.isNotEmpty) params['status'] = status;
 
-    final uri = Uri.parse('$baseUrl/tasks').replace(queryParameters: params.isEmpty ? null : params);
+    final uri = Uri.parse('$baseUrl/tasks')
+        .replace(queryParameters: params.isEmpty ? null : params);
     final response = await http.get(uri, headers: await _headers());
 
     if (response.statusCode == 200) {
@@ -407,6 +418,17 @@ class ApiService {
     }
   }
 
+  Future<void> deleteUnit(String unitId) async {
+    final response = await http.delete(
+      Uri.parse('$baseUrl/units/$unitId'),
+      headers: await _headers(),
+    );
+
+    if (response.statusCode != 200 && response.statusCode != 204) {
+      throw Exception('Failed to delete unit: ${response.body}');
+    }
+  }
+
   // ============================================================================
   // ENROLLMENTS
   // ============================================================================
@@ -495,7 +517,8 @@ class ApiService {
   // NOTIFICATIONS
   // ============================================================================
 
-  Future<List<dynamic>> listNotifications(String userId, {bool unreadOnly = false}) async {
+  Future<List<dynamic>> listNotifications(String userId,
+      {bool unreadOnly = false}) async {
     var url = '$baseUrl/notifications/user/$userId';
     if (unreadOnly) {
       url += '?unreadOnly=true';
@@ -511,6 +534,55 @@ class ApiService {
       return data['notifications'] ?? [];
     } else {
       throw Exception('Failed to list notifications: ${response.body}');
+    }
+  }
+
+  Future<List<dynamic>> listAllNotifications() async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/notifications'),
+      headers: await _headers(),
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return data['notifications'] ?? [];
+    } else {
+      throw Exception('Failed to list all notifications: ${response.body}');
+    }
+  }
+
+  Future<Map<String, dynamic>> createNotification({
+    required String title,
+    required String message,
+    required String audience,
+    String type = 'general',
+  }) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/notifications'),
+      headers: await _headers(),
+      body: jsonEncode({
+        'title': title,
+        'message': message,
+        'audience': audience,
+        'type': type,
+      }),
+    );
+
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Failed to create notification: ${response.body}');
+    }
+  }
+
+  Future<void> deleteNotification(String notificationId) async {
+    final response = await http.delete(
+      Uri.parse('$baseUrl/notifications/$notificationId'),
+      headers: await _headers(),
+    );
+
+    if (response.statusCode != 200 && response.statusCode != 204) {
+      throw Exception('Failed to delete notification: ${response.body}');
     }
   }
 
@@ -532,7 +604,8 @@ class ApiService {
     );
 
     if (response.statusCode != 200) {
-      throw Exception('Failed to mark all notifications as read: ${response.body}');
+      throw Exception(
+          'Failed to mark all notifications as read: ${response.body}');
     }
   }
 
@@ -610,8 +683,75 @@ class ApiService {
       throw Exception('Failed to get study stats: ${response.body}');
     }
   }
+
+  Future<Map<String, dynamic>> getTask(String taskId) async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/tasks/$taskId'),
+      headers: await _headers(),
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body)['task'];
+    } else {
+      throw Exception('Failed to load task');
+    }
+  }
+
+  Future<Map<String, dynamic>> createTaskGroup({
+    required String taskId,
+    required String name,
+    required List<Map<String, dynamic>> students,
+  }) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/tasks/$taskId/groups'),
+      headers: await _headers(),
+      body: jsonEncode({
+        'name': name,
+        'students': students,
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Failed to create group');
+    }
+  }
+
+  Future<List<dynamic>> listGroupMessages(String groupId) async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/groups/$groupId/messages'),
+      headers: await _headers(),
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return data['messages'] ?? [];
+    } else {
+      throw Exception('Failed to load group messages: ${response.body}');
+    }
+  }
+
+  Future<Map<String, dynamic>> sendGroupMessage({
+    required String groupId,
+    required String senderId,
+    required String senderName,
+    required String text,
+  }) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/groups/$groupId/messages'),
+      headers: await _headers(),
+      body: jsonEncode({
+        'senderId': senderId,
+        'senderName': senderName,
+        'text': text,
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Failed to send group message: ${response.body}');
+    }
+  }
 }
-
-
-
-
