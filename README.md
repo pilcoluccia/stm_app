@@ -134,10 +134,32 @@ Role is determined automatically by email:
 
 ---
 
+## Running with Docker
+
+The full app (frontend + backend) can be run with Docker without installing Flutter or Node.js locally.
+
+See [DOCKER_SETUP.md](DOCKER_SETUP.md) for full instructions.
+
+Quick start:
+
+```powershell
+docker compose up --build
+```
+
+Then open `http://localhost:8080`.
+
+For Firestore setup see [FIRESTORE_SETUP.md](FIRESTORE_SETUP.md).
+
+For UAT testing checklist see [UAT_TESTING.md](UAT_TESTING.md).
+
+---
+
 ## Tech stack
 
 - **Flutter** 3.6+
 - **Firebase Auth** — authentication
+- **Cloud Firestore** — backend data storage
 - **SQLite** (`sqflite`) — local task storage
 - **fl_chart** — analytics charts
 - **google_sign_in** — Google OAuth (web & mobile)
+- **Docker + Nginx** — containerised deployment

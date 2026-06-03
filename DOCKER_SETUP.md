@@ -127,3 +127,62 @@ docker compose down -v
 ```
 
 Only use `-v` if you intentionally want to reset Docker volume data.
+
+---
+
+## 8. Troubleshooting
+
+### Port already in use
+
+If you see an error like `port is already allocated`, another process is using port 5000 or 8080.
+
+Find and stop the process, or change the port in `docker-compose.yml`:
+
+```yaml
+ports:
+  - "5001:5000"   # change left number only
+```
+
+---
+
+### Backend container keeps restarting
+
+Check the backend logs:
+
+```powershell
+docker compose logs backend
+```
+
+The most common cause is a missing or invalid `backend/serviceAccountKey.json`. Place the correct file and rebuild:
+
+```powershell
+docker compose up --build
+```
+
+---
+
+### Frontend shows a blank page or old version
+
+Force a full rebuild without cache:
+
+```powershell
+docker compose down
+docker compose build --no-cache
+docker compose up
+```
+
+---
+
+### Google Sign-In fails in Docker
+
+Make sure `http://localhost:8080` is added as an **Authorized JavaScript origin** in Google Cloud Console under the OAuth 2.0 client for this project.
+
+---
+
+### Check container status
+
+```powershell
+docker compose ps
+```
+
+Both `stm_backend` and `stm_frontend` should show status `running` or `healthy`.

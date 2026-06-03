@@ -105,3 +105,78 @@ The health response should show:
 ```
 
 If `firestoreEnabled` is false, the backend cannot find or read `backend/serviceAccountKey.json`.
+
+---
+
+## 6. Firestore security rules
+
+When moving out of test mode, apply these rules in Firebase Console → Firestore Database → Rules:
+
+```javascript
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Users can only read their own document.
+    match /users/{userId} {
+      allow read: if request.auth != null && request.auth.token.email == userId;
+      allow write: if false;
+    }
+
+    // Authenticated users can read units and enrollments.
+    match /units/{unitId} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+
+    match /enrollments/{enrollmentId} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+
+    // Tasks are readable by authenticated users.
+    match /tasks/{taskId} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+
+    // Group messages readable by authenticated users.
+    match /groupMessages/{messageId} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+
+    // All other writes go through the backend service account only.
+  }
+}
+```
+
+The backend uses the service account key and bypasses these rules. These rules only apply to direct client access.
+
+---
+
+## 7. Troubleshooting Firestore
+
+### `firestoreEnabled: false` in health check
+
+- Check that `backend/serviceAccountKey.json` exists and is not empty.
+- Make sure the file belongs to the correct Firebase project.
+- Rebuild the Docker containers after placing the key:
+
+```powershell
+docker compose down
+docker compose up --build
+```
+
+### Permission denied errors in backend logs
+
+- Verify the service account has the **Cloud Datastore User** role in Google Cloud Console → IAM.
+
+### Data not appearing in Firebase Console
+
+- Firestore may take a few seconds to show new documents.
+- Check the backend logs for write errors:
+
+```powershell
+docker compose logs backend
+```
