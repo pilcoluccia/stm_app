@@ -1,0 +1,24 @@
+services:
+  backend:
+    build:
+      context: ./backend
+    container_name: stm_backend
+    ports:
+      - "5000:5000"
+    volumes:
+      - stm_backend_data:/app/data
+      - ./backend/serviceAccountKey.json:/app/serviceAccountKey.json:ro
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: .
+    container_name: stm_frontend
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  stm_backend_data:
